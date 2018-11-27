@@ -16,6 +16,8 @@ import (
 
 func main() {
 
+	nPackets := 0
+
 	//Basic variables
 	port := ":8080"
 	protocol := "udp"
@@ -39,6 +41,8 @@ func main() {
 	//Keep calling this function
 	for {
 		display(udpConn)
+		nPackets++
+		fmt.Printf("Number of packets: %d \n", nPackets)
 	}
 
 }

@@ -10,9 +10,10 @@ package main
 
 import (
 	"fmt"
+//	"os"
 	"math"
 	"net"
-//	"github.com/gordonklaus/portaudio"
+	"github.com/gordonklaus/portaudio"
 )
 
 var readBank = 0
@@ -24,10 +25,23 @@ const bufferSize = 96
 
 const sampleRate = 8000
 const bytesPerSample = 2
+const numberOfChannels = 2
 
 var availableFrames = 0
 
 var packetsReceived = 0
+
+var buffer = make([]int16, bufferSize * numberOfChannels * nBanks)
+
+var min int16 = 32767
+var max int16 = -32768
+
+var topeBuffer = make([]byte, 80000)
+var receivedBytes = 0
+
+func finish() {
+	fmt.Println("As I thought...")
+}
 
 func main() {
 
@@ -54,22 +68,23 @@ func main() {
 		fmt.Println(err)
 	}
 
-	buffer := make([]int16, bufferSize * nBanks)
         for i:= range buffer {
                 buffer[i] = int16(2000.0*math.Sin(float64(i)/3.0))
          }
-/*
+
 	// audio
 	portaudio.Initialize()
 	defer portaudio.Terminate()
 
 
-	stream, err := portaudio.OpenDefaultStream(0, 1, sampleRate, bufferSize,
+	stream, err := portaudio.OpenDefaultStream(0, numberOfChannels, sampleRate, bufferSize,
      		func(out []int16) {
 			if availableFrames > 0 {
+				
 				for i:=range out {
-					out[i] = buffer[i+bufferSize*(availableFrames-1)]
+					out[i] = buffer[i+bufferSize*numberOfChannels*(readBank)]
 				}
+				readBank = (readBank + 1) % nBanks
 				availableFrames--
 				return
 			}
@@ -81,22 +96,22 @@ func main() {
 	defer stream.Close()
 
 	fmt.Printf("frames: %d\n", availableFrames)
-*/
+
 	//Keep calling this function
 	for {
 
-		fmt.Println("listening for frame...")
-		addData(udpConn, buffer)
-		
+		addData(udpConn)
 	}
 
 }
 
-func addData(conn *net.UDPConn, sharedBuffer []int16) {
+func addData(conn *net.UDPConn) {
 
+	var maxShortVal int16 = 0
 	var buf [2048]byte
 	n, err := conn.Read(buf[0:])
-	if n != bufferSize * bytesPerSample {
+	//fmt.Printf("%d bytes received\n", n)
+	if n != bufferSize * bytesPerSample * numberOfChannels {
 		fmt.Println("Packet dropped")
 		return
 	}
@@ -106,12 +121,27 @@ func addData(conn *net.UDPConn, sharedBuffer []int16) {
 	} else {
 		//fmt.Println(hex.EncodeToString(buf[0:n]))
 		//fmt.Printf("Package Done, size: %d  \n", n)
-		for i := 0 ; i < bufferSize; i++ {
-			sharedBuffer[i+bufferSize*(availableFrames-1)] = int16(buf[i*2]) + int16(buf[i*2+1]) << 8
+		if availableFrames < nBanks {
+			for i := 0 ; i < bufferSize * numberOfChannels; i++ {
+				shortval := int16(buf[i*2]) + int16(buf[i*2+1]) << 8
+				if(shortval > maxShortVal) { maxShortVal = shortval }
+				if(shortval > max) { max = shortval }
+				if(shortval < min) { min = shortval }
+				buffer[i+bufferSize*numberOfChannels*(writeBank)] = shortval
+			}
+			availableFrames++
+			writeBank = (writeBank + 1) % nBanks
+		} else {
+			//fmt.Println("Warning: buffer full")
 		}
-		availableFrames++
 	}
+	//for i := 0 ; i < n; i++ {
+	//	topeBuffer[i+receivedBytes] = buf[i]
+	//}
+	receivedBytes = receivedBytes + n
 	packetsReceived++
-	fmt.Printf("frames: %d, packets received: %d\n", availableFrames, packetsReceived)
+	//fmt.Printf("min: %d, max %d, this frame: %d, total bytes: %d\n", min, max, maxShortVal, receivedBytes)
 
 }
+
+

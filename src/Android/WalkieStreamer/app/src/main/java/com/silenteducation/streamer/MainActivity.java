@@ -18,18 +18,24 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-public class MainActivity extends AppCompatActivity {
+import java.util.Timer;
+import java.util.TimerTask;
+
+public class MainActivity extends AppCompatActivity implements Runnable {
     private boolean recording = false;
     private String tempPath;
     private String destPath;
     private int samplerate;
     private int buffersize;
 
+    public Thread t;
+
+
     private Button connectButton;
 
     private TextView textView;
     private EditText editText;
-    private EditText peakValue;
+    public EditText peakValue;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,8 +63,15 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        t = new Thread(this);
+
+
         // Got all permissions, initialize.
         initialize();
+
+
+
+
     }
 
     @Override
@@ -78,19 +91,47 @@ public class MainActivity extends AppCompatActivity {
     private boolean connected = false;
 
     private void ConnectToServer() {
+        textView.setText("Connect to server clicked");
         editText = (EditText)findViewById(R.id.editText);
-        peakValue = (EditText)findViewById(R.id.peakValue);
         initUDP(buffersize);
         String res = connect(editText.getText().toString(), 8080);
         connected = true;
         textView.setText("Connect to " + editText.getText().toString() + ", result: " + res);
+        t.start();
+
+
     }
 
-    public void updateMaxValue(int maxValue) {
+    public int nFrames = 0;
+
+    public void run() {
+
+        while(1<2) {
+            try {
+                Thread.sleep(10);
+                updateMaxValue(getFramePeak());
+            }
+            catch (Exception e){
+
+            }
+        }
+
+    }
+
+
+    public void updateMaxValue(int maxValue)
+    {
         peakValue.setText("" + maxValue);
     }
 
     private void initialize() {
+
+        boolean hasLowLatencyFeature =
+                getPackageManager().hasSystemFeature(PackageManager.FEATURE_AUDIO_LOW_LATENCY);
+
+        peakValue = (EditText)findViewById(R.id.peakValue);
+        peakValue.setText("peak value ref ok");
+        if(hasLowLatencyFeature) peakValue.setText("Has Low Latency Feature");
 
         textView = (TextView)findViewById(R.id.textView);
 
@@ -106,8 +147,8 @@ public class MainActivity extends AppCompatActivity {
         }
         //if (samplerateString == null) samplerateString = "48000";
         //if (buffersizeString == null) buffersizeString = "480";
-        samplerate = 8000;//Integer.parseInt(samplerateString);
-        buffersize = 96;//Integer.parseInt(buffersizeString);
+        samplerate = 8000;//8000;//Integer.parseInt(samplerateString);
+        buffersize = 48;//96;//Integer.parseInt(buffersizeString);
 
         System.loadLibrary("WalkieStreamer");             // load native library
         tempPath = getCacheDir().getAbsolutePath() + "/temp.wav";  // temporary file path
@@ -116,7 +157,7 @@ public class MainActivity extends AppCompatActivity {
         //Log.d("Recorder", "Temporary file: " + tempPath);
         //Log.d("Recorder", "Destination file: " + destPath + ".wav");
 
-
+        textView.setText("Initialized");
         //sendPacket();
 
 
@@ -162,4 +203,5 @@ public class MainActivity extends AppCompatActivity {
     private native void initUDP(int bufferLength);
     private native void cleanUp();
     private native void sendPacket();
+    public native int getFramePeak();
 }

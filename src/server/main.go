@@ -21,11 +21,13 @@ var writeBank = 0
 
 const nBanks = 4
 
-const bufferSize = 96
+const bufferSize = 48
+//96
 
 const sampleRate = 8000
+//8000
 const bytesPerSample = 2
-const numberOfChannels = 2
+const numberOfChannels = 1
 
 var availableFrames = 0
 

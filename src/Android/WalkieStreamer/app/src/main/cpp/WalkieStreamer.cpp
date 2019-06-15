@@ -18,6 +18,8 @@
 
 unsigned int buflen;
 
+JavaVM* g_JavaVM;
+
 JNIEnv *mainActivityEnv;
 jobject mainActivityObj;
 jmethodID updateMax;
@@ -38,6 +40,8 @@ char buf[MAXBUFLEN];
 
 #define BYTES_PER_SAMPLE 2
 
+int nFrames = 0;
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_silenteducation_streamer_MainActivity_initUDP(
         JNIEnv* env,
@@ -57,10 +61,17 @@ Java_com_silenteducation_streamer_MainActivity_connect(
         jstring host,
         jint port) {
 
+    env->GetJavaVM(&g_JavaVM);
+
+    //// call friggin java
+    //JNIEnv *_env;
+    //g_JavaVM->GetEnv((void**)&_env, JNI_VERSION_1_6);
     mainActivityEnv = env;
     mainActivityObj = obj;
-    cls = env->GetObjectClass(obj);//, mainActivityObj)
-    updateMax = env->GetMethodID(cls, "updateMaxValue", "(I)V");
+    cls = mainActivityEnv->FindClass("com/silenteducation/streamer/MainActivity");
+    updateMax = mainActivityEnv->GetMethodID(cls, "updateMaxValue", "(I)V");
+    mainActivityEnv->CallVoidMethod(mainActivityObj, updateMax, 76);
+
 
     const char *utfhost = env->GetStringUTFChars(host, 0);
 
@@ -98,6 +109,15 @@ Java_com_silenteducation_streamer_MainActivity_cleanUp(
     close(s);
 }
 
+short int frameMaximum = -1;
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_silenteducation_streamer_MainActivity_getFramePeak(
+        JNIEnv* env,
+        jobject /* this */) {
+        return frameMaximum;
+}
+
 
 #define log_write __android_log_write
 
@@ -107,6 +127,8 @@ float *floatBuffer;
 
 const int numberOfChannels = 2;
 
+
+
 // This is called periodically by the audio engine.
 static bool audioProcessing (
         void * __unused clientdata, // custom pointer
@@ -114,9 +136,17 @@ static bool audioProcessing (
         int numberOfFrames,         // number of frames to process
         int __unused samplerate     // sampling rate
 ) {
-    //SuperpoweredShortIntToFloat(audio, floatBuffer, (unsigned int)numberOfFrames);
-    //recorder->process(floatBuffer, (unsigned int)numberOfFrames);
-    sendto(s, (unsigned char *)audio, buflen * numberOfChannels, 0, (struct sockaddr *) &si_other, slen);
+    // ahora transmite en MONO
+    frameMaximum = audio[0];
+    short int TempBuffer[MAXBUFLEN];
+    for(int i = 0; i < buflen * 2; ++i) {
+        TempBuffer[i] = audio[i*2];
+        if(TempBuffer[i] > frameMaximum) frameMaximum = TempBuffer[i];
+    }
+
+
+    // finally, send out to the world
+    sendto(s, (unsigned char *)TempBuffer, buflen, 0, (struct sockaddr *) &si_other, slen);
     return false;
 }
 

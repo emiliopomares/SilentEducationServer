@@ -1,11 +1,12 @@
 package main
 
 import (
-	"encoding/hex"
+	//"encoding/hex"
 	"log"
 	//"net/http"
 	"encoding/json"
 	"io/ioutil"
+	"strconv"
 	"fmt"
 	"net"
 	//"crypto/sha256"
@@ -29,7 +30,18 @@ type ServerInfo struct {
 	UserPasswordHash	string	`json:"userpasswordhash"`
 }
 
+const (
+        MulticastAddr   = "224.0.0.1"
+        maxDatagramSize = 8192
+)
+
 var serverInfo *ServerInfo
+
+
+
+/////////////////////////////////////////////////////
+//    Configuration                                //
+/////////////////////////////////////////////////////
 
 func SaveServerConfigToFile() {
     marshaledData, _ := json.Marshal(serverInfo)
@@ -48,31 +60,14 @@ func LoadServerConfigFromFile() {
         serverInfo = config
 }
 
-const (
-	srvAddr         = "224.0.0.1"
-	maxDatagramSize = 8192
-)
 
-func main() {
-	LocalIP = GetLocalIP()
-	fmt.Println("Silent Education Server started on IPv4: " + LocalIP)
-	serveMulticastUDP(srvAddr+":"+MulticastUDPPort, msgHandler)
-}
 
-//func CommunicateServerIPToSupplicant(supplicant string) {
-//        fmt.Println(" >> CommunicateServerIPToSupplicant called:  " + supplicant)
-//	client := &http.Client{}
-//	req, err := http.NewRequest("GET", "http://"+supplicant+":"+RESTPort+"/serverip/"+LocalIP, nil)
-//	if err != nil {
-//		fmt.Println("Error: " + err.Error())
-//	} else {
-//		req.Header.Set("psk", SilentEducationPSK)	
-//		_, _ = client.Do(req)
-//	}
-//}
+/////////////////////////////////////////////////////
+//    Server discovery                             //
+/////////////////////////////////////////////////////
 
 func CommunicateServerIPToSupplicant(supplicant string) {
-	addr, err := net.ResolveUDPAddr("udp", supplicant+":"+UnicastUDPPort)
+	addr, err := net.ResolveUDPAddr("udp", makeAddressFromIPandStrPort(supplicant, UnicastUDPPort))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -80,24 +75,17 @@ func CommunicateServerIPToSupplicant(supplicant string) {
 	c.Write([]byte("{\"serverip\":\"" + LocalIP + "\"}"))
 }
 
-
-//func ping(a string) {
-//	addr, err := net.ResolveUDPAddr("udp", a)
-//	if err != nil {
-//		log.Fatal(err)
-//	}
-//	c, err := net.DialUDP("udp", nil, addr)
-//	for {
-//		c.Write([]byte("hello, world\n"))
-//		time.Sleep(1 * time.Second)
-//	}
-//}
-
-
-
 func msgHandler(src *net.UDPAddr, n int, b []byte) {
-	log.Println(n, "bytes read from", src)
-	log.Println(hex.Dump(b[:n]))
+	supplicantAddr := string(src.IP.String())
+        CommunicateServerIPToSupplicant(supplicantAddr)
+}
+
+func makeAddressFromIPandStrPort(ip string, port string) string {
+        return ip + ":" + port
+}
+
+func makeAddressFromIPandIntPort(ip string, port int) string {
+        return ip + ":" + strconv.Itoa(port)
 }
 
 func GetLocalIP() string {
@@ -130,10 +118,26 @@ func serveMulticastUDP(a string, h func(*net.UDPAddr, int, []byte)) {
 		if err != nil {
 			log.Fatal("ReadFromUDP failed:", err)
 		}
-		supplicantAddr := string(src.IP.String())
+		//supplicantAddr := string(src.IP.String())
 		h(src, n, b)
-		fmt.Println("Writing back to UDP socket...")
-		CommunicateServerIPToSupplicant(supplicantAddr)
+		//fmt.Println("Writing back to UDP socket...")
+		//CommunicateServerIPToSupplicant(supplicantAddr)
 	}
 }
 
+func startServiceDiscovery() {
+	serveMulticastUDP(makeAddressFromIPandStrPort(MulticastAddr, MulticastUDPPort), msgHandler)
+}
+
+
+
+/////////////////////////////////////////////////////
+//    Main function                                //
+/////////////////////////////////////////////////////
+
+func main() {
+        LocalIP = GetLocalIP()
+        fmt.Println("Silent Education Server started on IPv4: " + LocalIP)
+	fmt.Println("Panel de control ->  http://127.0.0.1:8080/")
+	startServiceDiscovery()
+}

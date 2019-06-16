@@ -56,7 +56,8 @@ socket.onopen = function(e) {
 };
 
 socket.onmessage = function(event) {
-  alert(`[message] Data received: ${event.data} <- server`);
+  info = JSON.parse(event.data)
+  addDeviceToListOrUpdate(info)
 };
 
 socket.onclose = function(event) {
@@ -101,7 +102,7 @@ function DrawDevicesArray(deviceList) {
 	for (var i = 0; i < deviceList.length; i++) {
 		if(i>0 && i%NColumns==0) newContent += "</tr>\n"
 		newContent += "<td>"
-		newContent += "<table><tr><td bgcolor=\""+GetColorFromName(deviceList[i].status)+"\"><input type=\"checkbox\" id=\"checkbox"+i+"\"><div id='nameofdevice"+i+"' contenteditable='"+IsAdmin+"'>" + deviceList[i].name + "</div></td></tr>"
+		newContent += "<table><tr><td bgcolor=\""+GetColorFromName(deviceList[i].activation)+"\"><input type=\"checkbox\" id=\"checkbox"+i+"\"><div id='nameofdevice"+i+"' contenteditable='"+IsAdmin+"'>" + deviceList[i].name + "</div></td></tr>"
 		newContent += "<tr><td>Mensaje: <input type=\"textfield\"><button>Enviar</button><button onmousedown=\"startAudioUnicast("+i+")\" onmouseup=\"stopAudioUnicast("+i+")\"><img src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAPCAMAAADarb8dAAAAdVBMVEUAAADsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgCMHCccAAAAJnRSTlMAo0764M3BupFxYEQcBNmyraidjn1ta2c4MyPv7cWEdmNcUUc/Fhnu3e0AAAB9SURBVAjXdc5HDsMwDATAtdWbe09v/P8TY+lgQEAyAA+75IH4z5uQ5ZLxLDcXJoFpjqtxnGZxNdSiPr8AVNYa0oGo0AWibh8SJyJZ+mUD0AIfiopHrSyAeJcK+UYihqFPRddzH4vNObfqvWhwY/fjj4WTAtYSOKgKufDET18IZwhZzMvL4wAAAABJRU5ErkJggg=='></button></td></table>"
 		newContent += "</td>"
 		if(i>0 && i%NColumns==0) newContent += "<tr>\n"
@@ -121,9 +122,14 @@ function processWSMessage(msg) {
 function AppendOnChangeListeners(deviceList) {
 	for(var i = 0; i < deviceList.length; ++i) {
 		document.getElementById("nameofdevice"+i).addEventListener("input", 
-			eval('(() => { alert("name changed to: " + document.getElementById("nameofdevice'+i+'").innerHTML) })') 
+			eval(' (() => { RenameDevice(devices['+i+'].id, document.getElementById("nameofdevice'+i+'").innerHTML)}) ') 
 		, false);		
 	}
+}
+
+function RenameDevice(id, newname) {
+	//alert("trying to rename " + id + " to " + newname)
+	socket.send(JSON.stringify({rename:{id:id,to:newname}}))
 }
 
 function selectAllDevices() {
@@ -139,27 +145,24 @@ function selectNoDevices() {
 	}
 }
 
-var devices = [
-	//{
-	//	name: "Aula tec - 2",
-	//	status: "green"
-	//},
-	//{
-    //            name: "Aula dibujo",
-    //            status: "yellow"
-    //    },
-	//{
-    //            name: "Aula de tu puta madre",
-    //            status: "red"
-    //    },
-	//{
-	//	name: "Aula de tecnología 3",
-	//	status: "green"
-	//}
-]
+var devices = []
 
-function addDeviceToList(descriptor) {
-	devices.push(descriptor)
+function deviceInList(info) {
+	for(var i = 0; i < devices.length; ++i) {
+		if(devices[i].id == info.id) return i
+	}
+	return -1
+}
+
+function addDeviceToListOrUpdate(descriptor) {
+	var index = deviceInList(descriptor)
+	if(index==-1) {
+		devices.push(descriptor)
+	}
+	else {
+		devices[index] = descriptor
+	}
+	DrawDevicesArray(devices)
 }
 
 DrawDevicesArray(devices)

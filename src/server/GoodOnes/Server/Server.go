@@ -28,8 +28,18 @@ type DeviceInfo struct {
         Volume          int     `json:"volume"`
         Threshold       int     `json:"threshold"`
         Duration        int     `json:"duration"`
-        Name            string  `json:"name"`
-        Activation      int     `json:"activation"`
+	Id		string	`json:"id"`
+	Name            string  `json:"name"`
+        Activation      string  `json:"activation"`
+}
+
+type RenameInfo struct {
+	Id	string `json:"id"`
+	To	string `json:"to"`
+}
+
+type RenameCommand struct {
+	Rename		RenameInfo `json:"rename"`
 }
 
 type DeviceTypeDeclr struct {
@@ -253,6 +263,7 @@ func setupWebServer() {
 //    Websockets                                   //
 /////////////////////////////////////////////////////
 
+var devices	       []*DeviceInfo
 var deviceConnections  []*websocket.Conn
 var webConnections     []*websocket.Conn
 
@@ -264,19 +275,64 @@ func wsBroadcastToBrowsers(cmd string) {
 	}
 }
 
-func wsProcessDeviceCommand(cmd string) {
+func wsSendDevicesListToBrowser(socket *websocket.Conn) {
+	for i:=0 ; i < len(devices); i++ {
+		bytes, _ := json.Marshal(devices[i])
+		_ = socket.WriteMessage(1, bytes)
+	}
+}
+
+func wsBroadcastDeviceInfoToBrowsers(info *DeviceInfo) {
+	bytes, _ := json.Marshal(info)
+	fmt.Println("  >> about to broadcast these bytes to browsers: ", string(bytes))
+	for i:=0 ; i < len(webConnections); i++ {
+                _ = webConnections[i].WriteMessage(1, bytes)
+        }
+}
+
+func findInDeviceArray(id string) (int, bool) {
+	for i:=0; i < len(devices); i++ {
+		if(devices[i].Id == id) {
+			return i,true
+		}
+	}
+	return -1,false
+}
+
+func addToDevicesIfNew(info *DeviceInfo) {
+	_, found := findInDeviceArray(info.Id)
+	if !found {
+		fmt.Println(" Adding a new device to list: ", info)
+		devices = append(devices, info)
+		wsBroadcastDeviceInfoToBrowsers(info)	
+	}
+}
+
+func wsProcessDeviceCommand(socket *websocket.Conn, cmd string) {
 	fmt.Println("  >> wsProcessDeviceCommand called " + cmd)
 	var info DeviceInfo
 	err := json.Unmarshal([]byte(cmd), &info)
 	if err != nil {
 		fmt.Println("Error receiving command from device: " + err.Error())
 	} else {
-		wsBroadcastToBrowsers(cmd)
+		fmt.Println(" info unmarshalled as : " , info)
+		addToDevicesIfNew(&info)
+		//wsBroadcastToBrowsers(cmd)
 	}	
 }
 
-func wsProcessBrowserCommand(cmd string) {
-
+func wsProcessBrowserCommand(socket *websocket.Conn, cmd string) {
+	var command RenameCommand
+	err := json.Unmarshal([]byte(cmd), &command)
+	if err == nil {
+		fmt.Println("  >> rename command")
+		index, exists := findInDeviceArray(command.Rename.Id)
+		if exists {
+			deviceConnections[index].WriteMessage(1, []byte(cmd))			
+		}
+	} else {
+		fmt.Println("  >> was not a rename command: " , cmd)
+	}
 }
 
 func wsFunction(w http.ResponseWriter, r *http.Request) {
@@ -301,11 +357,12 @@ func wsFunction(w http.ResponseWriter, r *http.Request) {
                         	if err != nil {
                                 	return
                         	}
-                        	wsProcessDeviceCommand(string(msg))
+                        	wsProcessDeviceCommand(conn, string(msg))
                 	}
 		} 
 
 		if(string(handshakemsg) == "{\"devicetype\":\"web\"}") {
+			wsSendDevicesListToBrowser(conn)
 			fmt.Println("A new web browser registered ", msgtype)
 			webConnections = append(webConnections, conn)
 			for {
@@ -314,7 +371,7 @@ func wsFunction(w http.ResponseWriter, r *http.Request) {
                         	if err != nil {
                                 	return
                         	}
-                        	wsProcessBrowserCommand(string(msg))
+                        	wsProcessBrowserCommand(conn, string(msg))
                 	}
 		}
 

@@ -38,8 +38,9 @@ type DeviceInfo struct {
 	Volume		int	`json:"volume"`
 	Threshold	int	`json:"threshold"`
 	Duration	int	`json:"duration"`
+	Id		string  `json:"id"`
 	Name		string  `json:"name"`
-	Activation	int	`json:"activation"`
+	Activation	string	`json:"activation"`
 }
 
 var activationStatus int
@@ -56,6 +57,21 @@ const (
 )
 
 var serverIPknown bool
+
+
+
+/////////////////////////////////////////////////////
+//    Commands                                     //
+/////////////////////////////////////////////////////
+
+type RenameInfo struct {
+        Id      string `json:"id"`
+        To      string `json:"to"`
+}
+
+type RenameCommand struct {
+        Rename          RenameInfo `json:"rename"`
+}
 
 
 
@@ -93,6 +109,8 @@ func MakeDefaultConfigFile() DeviceInfo {
 	newdevinfo.Threshold = 50
 	newdevinfo.Duration = 20
 	newdevinfo.Name = rname
+	newdevinfo.Activation = "green"
+	newdevinfo.Id = rname
 	return newdevinfo
 }
 
@@ -174,6 +192,16 @@ func setupRESTAPI() {
 
 var socket gowebsocket.Socket 
 
+func wsProcessMessage(socket gowebsocket.Socket, command string) {
+	var rencomm RenameCommand
+	err := json.Unmarshal([]byte(command), &rencomm)
+	if err == nil {
+		deviceInfo.Name = rencomm.Rename.To
+		fmt.Println("    >>> Setting device name to " + deviceInfo.Name)
+		SaveDeviceConfigToFile()
+	}
+}
+
 func ConnectWS(ip string, port string) {
 	socket = gowebsocket.New("ws://" + ip + ":" + port + "/")
 	
@@ -186,7 +214,8 @@ func ConnectWS(ip string, port string) {
 	}
   
 	socket.OnTextMessage = func(message string, socket gowebsocket.Socket) {
-		log.Println("Received message - " + message)
+		//log.Println("Received message - " + message)
+		wsProcessMessage(socket, message)
 	}
   
 	socket.OnPingReceived = func(data string, socket gowebsocket.Socket) {
@@ -236,7 +265,7 @@ func SendHandshakeToServer() {
 	ConnectWS(serverInfo.ServerIP, "8081")
 	SendTextWS("{\"devicetype\":\"device\"}")
 	bytes, _ := json.Marshal(deviceInfo)
-	SendTextWS("{\"devicestatus\":" + string(bytes) + "}")
+	SendTextWS(string(bytes))
 }
 
 func msgHandler(src *net.UDPAddr, n int, b []byte) {

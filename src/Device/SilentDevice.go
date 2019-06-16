@@ -10,10 +10,13 @@ import (
 	//"encoding/hex"
 	"fmt"
 	"encoding/json"
+	"math/rand"
 	"github.com/gorilla/mux"
+	"github.com/sacOO7/gowebsocket"
 	"log"
 	"net/http"
 	"io"
+	"strings"
 	"io/ioutil"
 	"net"
 	"strconv"
@@ -31,17 +34,21 @@ type ServerInfo struct {
 	ServerIP	string	`json:"serverip"`
 }
 
-type DeviceStatus struct {
+type DeviceInfo struct {
 	Volume		int	`json:"volume"`
 	Threshold	int	`json:"threshold"`
 	Duration	int	`json:"duration"`
-	Status		int	`json:"status"`
+	Name		string  `json:"name"`
+	Activation	int	`json:"activation"`
 }
 
-var serverInfo *ServerInfo
-var deviceStatus DeviceStatus
+var activationStatus int
 
-const ServerInfoConfigFile = "./config.json"
+var serverInfo *ServerInfo
+var deviceInfo DeviceInfo
+
+const ServerInfoConfigFile = "./serverconfig.json"
+const DeviceConfigFile = "./deviceconfig.json"
 
 const (
 	MulticastAddr   = "224.0.0.1"
@@ -73,7 +80,34 @@ func LoadServerConfigFromFile() {
 	serverInfo = config
 }
 
+func SaveDeviceConfigToFile() {
+    marshaledData, _ := json.Marshal(deviceInfo)
+    _ = ioutil.WriteFile(DeviceConfigFile, marshaledData, 0644)
+    fmt.Printf("Device config info file written")
+}
 
+func MakeDefaultConfigFile() DeviceInfo {
+	var newdevinfo DeviceInfo
+	rname := "SE-" + RandStringRunes(6)
+	newdevinfo.Volume = 75
+	newdevinfo.Threshold = 50
+	newdevinfo.Duration = 20
+	newdevinfo.Name = rname
+	return newdevinfo
+}
+
+func LoadDeviceConfigFromFile() {
+	file, err := ioutil.ReadFile(DeviceConfigFile)
+        var config DeviceInfo
+        if err == nil {
+                _ = json.Unmarshal(file, &config)
+        	deviceInfo = config
+	} else {
+                fmt.Println("No device config info file found")
+		deviceInfo = MakeDefaultConfigFile()
+		SaveDeviceConfigToFile()
+        }
+}
 
 /////////////////////////////////////////////////////
 //    Temp REST API                                //
@@ -112,14 +146,15 @@ func GetServerIP(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetStatus(w http.ResponseWriter, r *http.Request) {
-        bytes, _ := json.Marshal(deviceStatus)
+        bytes, _ := json.Marshal(deviceInfo)
 	JSONResponseFromString(w, string(bytes))
 }
 
 func UpdateStatus(w http.ResponseWriter, r *http.Request) {
-        var newStatus DeviceStatus
-	json.NewDecoder(r.Body).Decode(&newStatus)	
-	deviceStatus = newStatus
+        var newInfo DeviceInfo
+	json.NewDecoder(r.Body).Decode(&newInfo)	
+	deviceInfo = newInfo
+	SaveDeviceConfigToFile()
         JSONResponseFromString(w, "{\"result\":\"success\"}")
 }
 
@@ -128,7 +163,7 @@ func setupRESTAPI() {
 	r.HandleFunc("/serverip", GetServerIP).Methods("GET")
 	r.HandleFunc("/status", GetStatus).Methods("GET")
 	r.HandleFunc("/status", UpdateStatus).Methods("PUT")
-	http.ListenAndServe(":8080", r)
+	http.ListenAndServe(":8000", r)
 }
 
 
@@ -137,6 +172,42 @@ func setupRESTAPI() {
 //    Websockets                                   //
 /////////////////////////////////////////////////////
 
+var socket gowebsocket.Socket 
+
+func ConnectWS(ip string, port string) {
+	socket = gowebsocket.New("ws://" + ip + ":" + port + "/")
+	
+	socket.OnConnectError = func(err error, socket gowebsocket.Socket) {
+		log.Fatal("Received connect error - ", err)
+	}
+  
+	socket.OnConnected = func(socket gowebsocket.Socket) {
+		log.Println("Connected to server");
+	}
+  
+	socket.OnTextMessage = func(message string, socket gowebsocket.Socket) {
+		log.Println("Received message - " + message)
+	}
+  
+	socket.OnPingReceived = func(data string, socket gowebsocket.Socket) {
+		log.Println("Received ping - " + data)
+	}
+  
+    	socket.OnPongReceived = func(data string, socket gowebsocket.Socket) {
+		log.Println("Received pong - " + data)
+	}
+
+	socket.OnDisconnected = func(err error, socket gowebsocket.Socket) {
+		log.Println("Disconnected from server ")
+		return
+	}
+  
+	socket.Connect()
+}
+
+func SendTextWS(msg string) {
+	socket.SendText(msg)
+}
 
 
 /////////////////////////////////////////////////////
@@ -161,6 +232,13 @@ func discoverServerIP() {
 	}
 }
 
+func SendHandshakeToServer() {
+	ConnectWS(serverInfo.ServerIP, "8081")
+	SendTextWS("{\"devicetype\":\"device\"}")
+	bytes, _ := json.Marshal(deviceInfo)
+	SendTextWS("{\"devicestatus\":" + string(bytes) + "}")
+}
+
 func msgHandler(src *net.UDPAddr, n int, b []byte) {
 	var NewServerInfo ServerInfo
 	err := json.Unmarshal(b[:n], &NewServerInfo)
@@ -171,6 +249,7 @@ func msgHandler(src *net.UDPAddr, n int, b []byte) {
 		serverIPknown = true
 		serverInfo.ServerIP = serverIP
 		fmt.Println("Server IP is set to " + serverIP)
+		SendHandshakeToServer()
 	}
 }
 
@@ -203,14 +282,41 @@ func serveUnicastUDP(a string, h func(*net.UDPAddr, int, []byte)) {
 	}
 }
 
+
+
+
+/////////////////////////////////////////////////////
+//    Initializations                              //
+/////////////////////////////////////////////////////
+
 func initializeDevice() {
+	initializeRandom()
 	serverInfo = &ServerInfo{}
 	serverIPknown = false
+	LoadDeviceConfigFromFile()
 	go listenUDP()
 	go discoverServerIP()
 }
 
+func initializeRandom() {
+    rand.Seed(time.Now().UnixNano())
+}
 
+
+
+/////////////////////////////////////////////////////
+//    Randomization                                //
+/////////////////////////////////////////////////////
+
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func RandStringRunes(n int) string {
+    b := make([]rune, n)
+    for i := range b {
+        b[i] = letterRunes[rand.Intn(len(letterRunes))]
+    }
+    return strings.ToUpper(string(b))
+}
 
 
 /////////////////////////////////////////////////////

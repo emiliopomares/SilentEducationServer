@@ -13,10 +13,6 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-type SEDeviceStatus type {
-	
-}
-
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		upgrader.CheckOrigin = func(r *http.Request) bool { return true }
@@ -46,6 +42,6 @@ func main() {
 	})
 
 
-	http.ListenAndServe(":9188", nil)
+	http.ListenAndServe(":8081", nil)
 }
 

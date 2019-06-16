@@ -6,11 +6,17 @@ import (
 	//"net/http"
 	"encoding/json"
 	"io/ioutil"
+	"strings"
+	"io"
 	"strconv"
 	"fmt"
 	"net"
+	"net/http"
 	//"crypto/sha256"
 	//"time"
+
+	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 )
 
 const MulticastUDPPort string = "9191"
@@ -18,12 +24,24 @@ const UnicastUDPPort string = "9190"
 const RESTPort string = "9192"
 var LocalIP string
 
+type DeviceInfo struct {
+        Volume          int     `json:"volume"`
+        Threshold       int     `json:"threshold"`
+        Duration        int     `json:"duration"`
+        Name            string  `json:"name"`
+        Activation      int     `json:"activation"`
+}
+
+type DeviceTypeDeclr struct {
+	DeviceType	string	`json:"devicetype"`
+}
+
 const DefaultPassword string = "1234"
 
 // schema for the prototype: simple PSK, better than nothing!
 const SilentEducationPSK string = "4baUV/2T=1a4nGrDS43FGnv6100asRNa35+shd/2b42300aNUFHsdn2m3iUJ86B/d2"
 
-const ServerInfoConfigFile = "./config.json"
+const ServerInfoConfigFile = "./data/config.json"
 
 type ServerInfo struct {
 	AdminPasswordHash	string	`json:"adminpasswordhash"`
@@ -33,9 +51,17 @@ type ServerInfo struct {
 const (
         MulticastAddr   = "224.0.0.1"
         maxDatagramSize = 8192
+	LoginAccessFile	= "./data/LoginAccessTemplate.html"
+	ControlPanelFile = "./data/ControlPanelTemplate.html"
 )
 
+var upgrader = websocket.Upgrader{
+        ReadBufferSize:  1024,
+        WriteBufferSize: 1024,
+}
+
 var serverInfo *ServerInfo
+
 
 
 
@@ -118,17 +144,186 @@ func serveMulticastUDP(a string, h func(*net.UDPAddr, int, []byte)) {
 		if err != nil {
 			log.Fatal("ReadFromUDP failed:", err)
 		}
-		//supplicantAddr := string(src.IP.String())
 		h(src, n, b)
-		//fmt.Println("Writing back to UDP socket...")
-		//CommunicateServerIPToSupplicant(supplicantAddr)
 	}
 }
 
 func startServiceDiscovery() {
-	serveMulticastUDP(makeAddressFromIPandStrPort(MulticastAddr, MulticastUDPPort), msgHandler)
+	go serveMulticastUDP(makeAddressFromIPandStrPort(MulticastAddr, MulticastUDPPort), msgHandler)
 }
 
+
+/////////////////////////////////////////////////////
+//    WebServer                                    //
+/////////////////////////////////////////////////////
+
+func withPSKCheck(next http.HandlerFunc) http.HandlerFunc {
+        return func(w http.ResponseWriter, r *http.Request) {
+                psk := r.Header.Get("psk")
+                if psk == SilentEducationPSK {
+                        next.ServeHTTP(w, r)
+                } else {
+                        fmt.Println("forbidden")
+                        JSONResponseFromStringAndCode(w, "{\"result\":\"forbidden\"}", 403)
+                }
+        }
+}
+
+func ReplyWithInstancedFileTemplate(w http.ResponseWriter, filepath string, keys []string, values []string) {
+	rawcontents, _ := ioutil.ReadFile(filepath)
+	contents := string(rawcontents)
+	for i := 0 ; i < len(keys) ; i++ {
+		contents = strings.Replace(contents, keys[i], values[i], 5)
+	}
+	w.Header().Set("Content-Type", "text/html; charset=UTF-8")
+	io.WriteString(w, contents)
+}
+
+func JSONResponseFromString(w http.ResponseWriter, res string) {
+        w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+        w.WriteHeader(http.StatusOK)
+        io.WriteString(w, res)
+}
+
+func JSONResponseFromStringAndCode(w http.ResponseWriter, res string, status int) {
+        w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+        w.WriteHeader(status)
+        io.WriteString(w, res)
+}
+
+func CheckPasswd(user string, pass string) bool {
+	return pass == "1234"
+}
+
+func AdminUserHandler(w http.ResponseWriter, pass string) {
+	if CheckPasswd("Admin", pass) {
+		ReplyWithInstancedFileTemplate(w, ControlPanelFile, []string{"<usertype>", "<serverip>", "<isadmin>"}, []string{"Administrador", LocalIP, "true"})
+	} else {
+		ReplyWithInstancedFileTemplate(w, LoginAccessFile, []string{"<message>", "<serverip>"}, []string{"Datos de acceso incorrectos", LocalIP})
+	}
+}
+
+func UserUserHandler(w http.ResponseWriter, pass string) {
+	if CheckPasswd("Admin", pass) {
+                ReplyWithInstancedFileTemplate(w, ControlPanelFile, []string{"<usertype>", "<serverip>", "<isadmin>"}, []string{"Profesor/a", LocalIP, "false"})
+        } else {
+                ReplyWithInstancedFileTemplate(w, LoginAccessFile, []string{"<message>", "<serverip>"}, []string{"Datos de acceso incorrectos", LocalIP})
+        }
+}
+
+func NonAuthorizedUserHandler(w http.ResponseWriter, pass string) {
+	ReplyWithInstancedFileTemplate(w, LoginAccessFile, []string{"<message>", "<serverip>"}, []string{"Datos de acceso incorrectos", LocalIP})
+}
+
+func GetUserHandler(user string) func(http.ResponseWriter, string) {
+	if user == "Admin" {
+		return AdminUserHandler
+	} else if user == "User" {
+		return UserUserHandler
+	}
+	return NonAuthorizedUserHandler
+}
+
+func AttemptLogin(w http.ResponseWriter, r *http.Request) {
+	if err := r.ParseForm(); err != nil {
+            fmt.Fprintf(w, "ParseForm() err: %v", err)
+            return
+        }
+	user := r.FormValue("user")
+	pass := r.FormValue("passwd")
+	UserHandler := GetUserHandler(user)
+	UserHandler(w, pass)
+}
+
+func LoginScreen(w http.ResponseWriter, r *http.Request) {
+	ReplyWithInstancedFileTemplate(w, LoginAccessFile, []string{"<message>", "<serverip>"}, []string{"", LocalIP})
+}
+//ReplyWithInstancedFileTemplate(w, LoginAccessFile, []string{"<message>", "<serverip>"}, []string{"Datos de acceso incorrectos", LocalIP})
+
+func setupWebServer() {
+        r := mux.NewRouter()
+        r.HandleFunc("/", LoginScreen).Methods("GET")
+        r.HandleFunc("/login", AttemptLogin).Methods("POST")
+//        r.HandleFunc("/panel", GetPanel).Methods("PUT")
+        http.ListenAndServe(":8080", r)
+}
+
+
+/////////////////////////////////////////////////////
+//    Websockets                                   //
+/////////////////////////////////////////////////////
+
+var deviceConnections  []*websocket.Conn
+var webConnections     []*websocket.Conn
+
+func wsBroadcastToBrowsers(cmd string) {
+	fmt.Println("  >> wsBroadcastToBrowsers called " + cmd + " and webconnections.length = " + strconv.Itoa(len(webConnections)))
+	bytes := []byte(cmd)
+	for i:=0 ; i < len(webConnections); i++ {
+		_ = webConnections[i].WriteMessage(1, bytes)
+	}
+}
+
+func wsProcessDeviceCommand(cmd string) {
+	fmt.Println("  >> wsProcessDeviceCommand called " + cmd)
+	var info DeviceInfo
+	err := json.Unmarshal([]byte(cmd), &info)
+	if err != nil {
+		fmt.Println("Error receiving command from device: " + err.Error())
+	} else {
+		wsBroadcastToBrowsers(cmd)
+	}	
+}
+
+func wsProcessBrowserCommand(cmd string) {
+
+}
+
+func wsFunction(w http.ResponseWriter, r *http.Request) {
+		fmt.Println("wsFunction called")
+                upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+                conn, err := upgrader.Upgrade(w, r, nil) // error ignored for sake of simplicity
+                if err != nil {
+                        fmt.Println("This was the error: ", err)
+                }
+
+		msgtype, handshakemsg, err := conn.ReadMessage()
+		if err != nil {
+			return
+		}
+
+		if(string(handshakemsg) == "{\"devicetype\":\"device\"}") {
+			fmt.Println("A new device registered ", msgtype)
+			deviceConnections = append(deviceConnections, conn)
+			for {
+                        	// Read message from device
+                        	_, msg, err := conn.ReadMessage()
+                        	if err != nil {
+                                	return
+                        	}
+                        	wsProcessDeviceCommand(string(msg))
+                	}
+		} 
+
+		if(string(handshakemsg) == "{\"devicetype\":\"web\"}") {
+			fmt.Println("A new web browser registered ", msgtype)
+			webConnections = append(webConnections, conn)
+			for {
+                        	// Read message from browser
+                        	_, msg, err := conn.ReadMessage()
+                        	if err != nil {
+                                	return
+                        	}
+                        	wsProcessBrowserCommand(string(msg))
+                	}
+		}
+
+}
+
+func setupWebsocket() {
+	http.HandleFunc("/", wsFunction)
+	http.ListenAndServe(":8081", nil)
+}
 
 
 /////////////////////////////////////////////////////
@@ -140,4 +335,6 @@ func main() {
         fmt.Println("Silent Education Server started on IPv4: " + LocalIP)
 	fmt.Println("Panel de control ->  http://127.0.0.1:8080/")
 	startServiceDiscovery()
+	go setupWebServer()
+	setupWebsocket()
 }

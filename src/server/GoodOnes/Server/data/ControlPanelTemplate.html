@@ -1,0 +1,191 @@
+<title>Silent Education Control Panel</title>
+
+<style>
+body {
+  font-family: Arial;
+}
+</style>
+
+<html>
+<body>
+
+<div style="width:100%;height:45px;background:#888888;vertical-align: middle"><div id="AccountType" style="vertical-align: middle;"><usertype></div><button style="align-self: right" onclick="logout()">Cerrar sesión</button></div>
+
+<br>
+<center>
+
+
+
+<img src="data:image/png;base64,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">
+
+<br><br><br>
+<button style="align-self: right" onclick="selectAllDevices()">Todos</button> <button style="align-self: right" onclick="selectNoDevices()">Ninguno</button>
+<br><br>
+Mensaje: <input type=\"textfield\"><button>Enviar</button><button onmousedown="startAudioBroadcast()" onmouseup="stopAudioBroadcast()"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAPCAMAAADarb8dAAAAdVBMVEUAAADsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgCMHCccAAAAJnRSTlMAo0764M3BupFxYEQcBNmyraidjn1ta2c4MyPv7cWEdmNcUUc/Fhnu3e0AAAB9SURBVAjXdc5HDsMwDATAtdWbe09v/P8TY+lgQEAyAA+75IH4z5uQ5ZLxLDcXJoFpjqtxnGZxNdSiPr8AVNYa0oGo0AWibh8SJyJZ+mUD0AIfiopHrSyAeJcK+UYihqFPRddzH4vNObfqvWhwY/fjj4WTAtYSOKgKufDET18IZwhZzMvL4wAAAABJRU5ErkJggg=="></button>
+
+<div id="DeviceArray">
+<table>
+	<tr>
+		<td>
+
+			<table>
+				<tr>
+					<td bgcolor="#FFFF00">Dispositivo 0</td>	
+				</tr>
+				<tr>
+					<td>Mensaje: <input type="textfield"><button>Enviar</button></td>
+				</tr>
+			</table>
+
+		</td>
+	</tr>
+</table>
+
+
+
+</div>
+
+
+<script>
+	
+let socket = new WebSocket("ws://<serverip>:8081/");
+
+socket.onopen = function(e) {
+  //alert("[open] Connection established, send -> server");
+  socket.send(JSON.stringify({devicetype:"web"}))
+};
+
+socket.onmessage = function(event) {
+  alert(`[message] Data received: ${event.data} <- server`);
+};
+
+socket.onclose = function(event) {
+  if (event.wasClean) {
+    alert(`[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
+  } else {
+    // e.g. server process killed or network down
+    // event.code is usually 1006 in this case
+    alert('[close] Connection died');
+  }
+};
+
+socket.onerror = function(error) {
+  alert("socker.onerror" + `[error] ${error.message}`);
+};
+
+</script>
+
+
+
+</body>
+</html>
+
+<script>
+
+const NColumns = 3
+
+const IsAdmin = <isadmin>
+
+function GetColorFromName(name) {
+
+	if(name=="green") return "#00FF00"
+	if(name=="yellow") return "#FFFF00"
+	if(name=="red") return "#FF0000"
+	return "#FFFFFF"
+
+}
+
+function DrawDevicesArray(deviceList) {
+
+	var newContent = "<table cellpadding='20px' cellspacing='20px'><tr>\n"
+	for (var i = 0; i < deviceList.length; i++) {
+		if(i>0 && i%NColumns==0) newContent += "</tr>\n"
+		newContent += "<td>"
+		newContent += "<table><tr><td bgcolor=\""+GetColorFromName(deviceList[i].status)+"\"><input type=\"checkbox\" id=\"checkbox"+i+"\"><div id='nameofdevice"+i+"' contenteditable='"+IsAdmin+"'>" + deviceList[i].name + "</div></td></tr>"
+		newContent += "<tr><td>Mensaje: <input type=\"textfield\"><button>Enviar</button><button onmousedown=\"startAudioUnicast("+i+")\" onmouseup=\"stopAudioUnicast("+i+")\"><img src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAPCAMAAADarb8dAAAAdVBMVEUAAADsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgCMHCccAAAAJnRSTlMAo0764M3BupFxYEQcBNmyraidjn1ta2c4MyPv7cWEdmNcUUc/Fhnu3e0AAAB9SURBVAjXdc5HDsMwDATAtdWbe09v/P8TY+lgQEAyAA+75IH4z5uQ5ZLxLDcXJoFpjqtxnGZxNdSiPr8AVNYa0oGo0AWibh8SJyJZ+mUD0AIfiopHrSyAeJcK+UYihqFPRddzH4vNObfqvWhwY/fjj4WTAtYSOKgKufDET18IZwhZzMvL4wAAAABJRU5ErkJggg=='></button></td></table>"
+		newContent += "</td>"
+		if(i>0 && i%NColumns==0) newContent += "<tr>\n"
+	}
+	newContent += "</tr></table>\n"
+	if (deviceList.length == 0) newContent += "<h1>No hay dispositivos conectados</h1>"
+	document.getElementById("DeviceArray").innerHTML = newContent
+
+	AppendOnChangeListeners(deviceList)
+
+}
+
+function processWSMessage(msg) {
+	
+}
+
+function AppendOnChangeListeners(deviceList) {
+	for(var i = 0; i < deviceList.length; ++i) {
+		document.getElementById("nameofdevice"+i).addEventListener("input", 
+			eval('(() => { alert("name changed to: " + document.getElementById("nameofdevice'+i+'").innerHTML) })') 
+		, false);		
+	}
+}
+
+function selectAllDevices() {
+	alert('a' + devices.length)
+	for(var i = 0; i < devices.length; ++i) {
+		document.getElementById("checkbox"+i).checked = true;
+	}
+}
+
+function selectNoDevices() {
+	for(var i = 0; i < devices.length; ++i) {
+		document.getElementById("checkbox"+i).checked = false;
+	}
+}
+
+var devices = [
+	//{
+	//	name: "Aula tec - 2",
+	//	status: "green"
+	//},
+	//{
+    //            name: "Aula dibujo",
+    //            status: "yellow"
+    //    },
+	//{
+    //            name: "Aula de tu puta madre",
+    //            status: "red"
+    //    },
+	//{
+	//	name: "Aula de tecnología 3",
+	//	status: "green"
+	//}
+]
+
+function addDeviceToList(descriptor) {
+	devices.push(descriptor)
+}
+
+DrawDevicesArray(devices)
+
+function logout() {
+	socket.close();
+	window.location.replace("http://<serverip>:8080/");
+}
+
+function startAudioBroadcast() {
+	//alert("Start audio broadcast")
+}
+
+function stopAudioBroadcast() {
+	alert("Stop audio broadcast")	
+}
+
+function startAudioUnicast(device) {
+	//alert("Start audio unicast to device " + device)
+}
+
+function stopAudioUnicast(device) {
+	alert("Stop audio unicast to device " + device)
+}
+//document.getElementById("nameofdevice0").addEventListener("input", function() {
+//    alert("name changed to: " + document.getElementById("nameofdevice0").innerHTML)
+//}, false);
+
+</script>

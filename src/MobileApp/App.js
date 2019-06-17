@@ -7,7 +7,7 @@
  */
 
 import React, {Component} from 'react';
-import {Platform, StyleSheet, Text, View} from 'react-native';
+import {Platform, StyleSheet, Text, Image, View} from 'react-native';
 
 var httpServer = require('react-native-http-server');
 
@@ -18,7 +18,30 @@ const instructions = Platform.select({
     'Shake or press menu button for dev menu',
 });
 
+const StatusRed = require('./assets/red.png')
+const StatusYellow = require('./assets/yellow.png')
+const StatusGreen = require('./assets/green.png')
+
 var iplabel = null
+
+class ConnectionStatus extends Component<Props> {
+	constructor(Props) {
+		super(Props)
+		this.state = {
+			image: StatusRed
+		}
+	}
+
+	setState(state) {
+		this.setState({image:state})
+	}
+
+	render() {
+		return (
+			<Image source={this.state}/>
+		);
+	}
+}
 
 class TextLabel extends Component<Props> {
         constructor(Props) {

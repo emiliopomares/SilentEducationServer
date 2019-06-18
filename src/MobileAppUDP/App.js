@@ -7,26 +7,17 @@
  */
 
 import React, {Component} from 'react';
-import {Platform, StyleSheet, Text, Image, View} from 'react-native';
+import {Platform, StyleSheet, Button, Text, TextInput, Image, View} from 'react-native';
 
 global.Buffer = global.Buffer || require('buffer').Buffer
 
 const MulticastUDPPort = "9191"
+const MulticastUDPPortNumber = 9191
 const UnicastUDPPort = "9190"
 const RESTPort = "9192"
 
 var dgram = require('dgram')
-// OR, if not shimming via package.json "browser" field:
-// var dgram = require('react-native-udp')
 var socket = dgram.createSocket('udp4')
-//socket.bind(9190) //UnicastUDPPort)
-//socket.once('listening', function() {
-//  	alert("listening")
-//})
- 
-//socket.on('message', function(msg, rinfo) {
-//  alert("message: " + msg.toString())
-//})
 
 const StatusRed = require('./assets/red.png')
 const StatusYellow = require('./assets/yellow.png')
@@ -76,12 +67,72 @@ class ConnectionStatus extends Component<Props> {
         }
 }
 
+class PairRequest extends Component<Props> {
+	
+	thisContext = null
+
+	constructor(Props) {
+		super(Props)
+		this.state = {
+			pairStage: 'Not paired'
+		}
+		thisContext = this
+	}
+
+	completePairing() {
+		this.setState({pairStage:'Paired'});
+	}	
+
+	startPairing() {
+		this.setState({pairStage:'Pairing'});
+	}
+
+	cancelPairing() {
+		this.setState({pairStage:'Not paired'});
+	}
+
+	requestPairing = function() {
+                  var message = new Buffer("PairRequest");
+                  socket.send(message, 0, message.length, MulticastUDPPortNumber, MulticastHost, function(err, bytes) {});
+                  thisContext.startPairing();
+                }
+
+	attemptPairing = function() {
+		alert("Attempting to pair")
+	}
+
+	render() {
+		if(this.state.pairStage == 'Not paired') {
+			return (
+				<View>
+					<Text>Sin emparejar</Text>
+					<Button onPress={this.requestPairing} title="Emparejar" color="#841584" accessibilityLabel="Request pairing to a device"/>
+				</View>
+			);
+		}
+		else if(this.state.pairStage == 'Pairing') {
+			return (
+                                <View>
+                                        <Text>Introduce PIN del dispositivo:</Text>
+					<TextInput/>
+                                        <Button onPress={this.attemptPairing} title="Introducir" color="#2188A3" accessibilityLabel="Submit PIN"/>
+                                </View>
+                        );
+		}
+		else {
+			return null; 
+		}
+	}
+
+}
+
 
 export default class App extends Component<Props> {
 
   render() {
     return (
       <View style={styles.container}>
+	<PairRequest/>
 	<ConnectionStatus ref={(c) => connectionStatus = c}/>
         <Text style={styles.welcome}>Welcome to React Native!</Text>
         <Text style={styles.instructions}>To get started, edit App.js</Text>

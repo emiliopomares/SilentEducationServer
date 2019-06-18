@@ -41,6 +41,8 @@ type DeviceInfo struct {
 	Id		string  `json:"id"`
 	Name		string  `json:"name"`
 	Activation	string	`json:"activation"`
+	PairPIN		string  `json:"pairpin"`
+	PairedDevices 	int	`json:"paireddevices"`
 }
 
 var activationStatus int
@@ -238,6 +240,16 @@ func SendTextWS(msg string) {
 	socket.SendText(msg)
 }
 
+/////////////////////////////////////////////////////
+//    Status                                       //
+/////////////////////////////////////////////////////
+
+func ProcessPairRequest() {
+	newPIN := GeneratePIN()
+	deviceInfo.PairPIN = newPIN
+	fmt.Println("Pair request received. PIN: " + newPIN)
+	SaveDeviceConfigToFile()
+}
 
 /////////////////////////////////////////////////////
 //    Server discovery                             //
@@ -282,6 +294,15 @@ func msgHandler(src *net.UDPAddr, n int, b []byte) {
 	}
 }
 
+func multicastMsgHandler(stc *net.UDPAddr, n int, b []byte) {
+	msg := string(b)
+	fmt.Println("Some idiot broadcast the message " + msg)
+	if(strings.HasPrefix(msg, "PairRequest")) {
+		fmt.Println("  >> Processing PairRequest....")
+		ProcessPairRequest()
+	}	
+}
+
 func makeAddressFromIPandStrPort(ip string, port string) string {
 	return ip + ":" + port
 }
@@ -290,8 +311,29 @@ func makeAddressFromIPandIntPort(ip string, port int) string {
 	return ip + ":" + strconv.Itoa(port)
 }
 
-func listenUDP() {
+func listenMulticastUDP() {
+	serveMulticastUDP(makeAddressFromIPandStrPort(MulticastAddr, MulticastUDPPort), multicastMsgHandler)
+}
+
+func listenUnicastUDP() {
 	serveUnicastUDP(makeAddressFromIPandStrPort(MulticastAddr, UnicastUDPPort), msgHandler)
+}
+
+func serveMulticastUDP(a string, h func(*net.UDPAddr, int, []byte)) {
+        addr, err := net.ResolveUDPAddr("udp", a)
+        if err != nil {
+                log.Fatal(err)
+        }
+        l, err := net.ListenMulticastUDP("udp", nil, addr)
+        l.SetReadBuffer(maxDatagramSize)
+        for {
+                b := make([]byte, maxDatagramSize)
+                n, src, err := l.ReadFromUDP(b)
+                if err != nil {
+                        log.Fatal("ReadFromUDP failed:", err)
+                }
+                h(src, n, b)
+        }
 }
 
 func serveUnicastUDP(a string, h func(*net.UDPAddr, int, []byte)) {
@@ -311,6 +353,31 @@ func serveUnicastUDP(a string, h func(*net.UDPAddr, int, []byte)) {
 	}
 }
 
+func GetLocalIP() string {
+        var localIP string
+        addr, err := net.InterfaceAddrs()
+        if err != nil {
+                fmt.Printf("GetLocalIP in communication failed")
+                return "localhost"
+        }
+        for _, val := range addr {
+                if ip, ok := val.(*net.IPNet); ok && !ip.IP.IsLoopback() {
+                        if ip.IP.To4() != nil {
+                                localIP = ip.IP.String()
+                        }
+                }
+        }
+        return localIP
+}
+
+
+/////////////////////////////////////////////////////
+//    Initializations                              //
+/////////////////////////////////////////////////////
+
+func GeneratePIN() string {
+	return RandNumericString(4)
+}
 
 
 
@@ -323,7 +390,8 @@ func initializeDevice() {
 	serverInfo = &ServerInfo{}
 	serverIPknown = false
 	LoadDeviceConfigFromFile()
-	go listenUDP()
+	go listenUnicastUDP()
+	go listenMulticastUDP()
 	go discoverServerIP()
 }
 
@@ -337,6 +405,8 @@ func initializeRandom() {
 //    Randomization                                //
 /////////////////////////////////////////////////////
 
+var digits = []byte("0123456789")
+
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
 func RandStringRunes(n int) string {
@@ -347,6 +417,14 @@ func RandStringRunes(n int) string {
     return strings.ToUpper(string(b))
 }
 
+func RandNumericString(n int) string {
+    b := make([]byte, n)
+    for i := range b {
+        b[i] = digits[rand.Intn(len(digits))]
+    }
+    return strings.ToUpper(string(b))
+} 
+
 
 /////////////////////////////////////////////////////
 //    Main function				   //
@@ -354,5 +432,9 @@ func RandStringRunes(n int) string {
 
 func main() {
 	initializeDevice()
+	fmt.Println("Device initialized")
+	if(deviceInfo.PairPIN != "") {
+		fmt.Println("Pair PIN for this device: " + deviceInfo.PairPIN)
+	}
 	setupRESTAPI()
 }

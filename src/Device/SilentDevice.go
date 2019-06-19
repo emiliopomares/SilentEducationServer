@@ -42,6 +42,7 @@ type DeviceInfo struct {
 	Name		string  `json:"name"`
 	Activation	string	`json:"activation"`
 	PairPIN		string  `json:"pairpin"`
+	PairSecret	string	`json:"pairsecret"`
 	PairedDevices 	int	`json:"paireddevices"`
 }
 
@@ -183,9 +184,40 @@ func setupRESTAPI() {
 	r.HandleFunc("/serverip", GetServerIP).Methods("GET")
 	r.HandleFunc("/status", GetStatus).Methods("GET")
 	r.HandleFunc("/status", UpdateStatus).Methods("PUT")
+	r.HandleFunc("/pairing", CreatePairing).Methods("POST")
+	r.HandleFunc("/pairing", DeletePairing).Methods("DELETE")
+	r.HandleFunc("/pairing", CheckPairing).Methods("GET")
 	http.ListenAndServe(":8000", r)
 }
 
+
+
+/////////////////////////////////////////////////////
+//    REST API                                     //
+/////////////////////////////////////////////////////
+
+func CreatePairing(w http.ResponseWriter, r *http.Request) {
+	deviceInfo.PairedDevices++
+	SaveDeviceConfigToFile()
+	JSONResponseFromString(w, "{\"secret\":\""+deviceInfo.PairSecret+"\"}")
+}
+
+func DeletePairing(w http.ResponseWriter, r *http.Request) {
+	if(deviceInfo.PairedDevices > 0) {
+		deviceInfo.PairedDevices--
+	}
+	SaveDeviceConfigToFile()
+	JSONResponseFromString(w, "{\"result\":\"sucess\"}")
+}
+
+func CheckPairing(w http.ResponseWriter, r *http.Request) {
+	Secret := r.URL.Query()["s"][0]
+	if(Secret == deviceInfo.PairSecret) {
+		JSONResponseFromString(w, "{\"result\":true}")
+	} else {
+		JSONResponseFromString(w, "{\"result\":false}")
+	}
+}
 
 
 /////////////////////////////////////////////////////
@@ -246,9 +278,42 @@ func SendTextWS(msg string) {
 
 func ProcessPairRequest() {
 	newPIN := GeneratePIN()
+	newSecret := GeneratePairSecret()
 	deviceInfo.PairPIN = newPIN
+	deviceInfo.PairSecret = newSecret
 	fmt.Println("Pair request received. PIN: " + newPIN)
 	SaveDeviceConfigToFile()
+}
+
+func ProcessRespondRequest(Secret string, supplicantAddr string) {
+	if(Secret != deviceInfo.PairSecret) {
+		return
+	}
+	addr, err := net.ResolveUDPAddr("udp", makeAddressFromIPandStrPort(supplicantAddr, UnicastUDPPort))
+        if err != nil {
+                log.Fatal(err)
+        }
+        c, err := net.DialUDP("udp", nil, addr)
+	LocalIP := GetLocalIP()
+        c.Write([]byte("{\"serverip\":\"" + LocalIP + "\"}"))
+}
+
+
+func ProcessWhoisRequest(PIN string, supplicantAddr string) {
+	if(PIN == deviceInfo.PairPIN) {
+		addr, err := net.ResolveUDPAddr("udp", makeAddressFromIPandStrPort(supplicantAddr, UnicastUDPPort))
+		if err != nil {
+                	fmt.Println("Error")
+                	log.Fatal(err)
+        	}
+        	c, err := net.DialUDP("udp", nil, addr)
+		if err != nil {
+			fmt.Println("Error")
+                        log.Fatal(err)
+		}
+		LocalIP := GetLocalIP()
+        	c.Write([]byte("{\"deviceip\":\"" + LocalIP + "\"}"))
+	}
 }
 
 /////////////////////////////////////////////////////
@@ -266,7 +331,7 @@ func discoverServerIP() {
 		fmt.Println("Sending service discovery packet...")
 		c.Write([]byte("SERequestServerIP"))
 		fmt.Println("Waiting for echo...")
-		time.Sleep(5 * time.Second)
+		time.Sleep(15 * time.Second)
 		if serverIPknown == false {
 			fmt.Println("Echo timeout, retrying...")
 		}
@@ -294,13 +359,23 @@ func msgHandler(src *net.UDPAddr, n int, b []byte) {
 	}
 }
 
-func multicastMsgHandler(stc *net.UDPAddr, n int, b []byte) {
+func multicastMsgHandler(src *net.UDPAddr, n int, b []byte) {
 	msg := string(b)
-	fmt.Println("Some idiot broadcast the message " + msg)
+//	fmt.Println("Some idiot broadcast the message " + msg)
+	supplicantAddr := string(src.IP.String())
 	if(strings.HasPrefix(msg, "PairRequest")) {
 		fmt.Println("  >> Processing PairRequest....")
 		ProcessPairRequest()
 	}	
+	if(strings.HasPrefix(msg, "Respond")) {
+		Secret := string(b[7:31])
+		ProcessRespondRequest(Secret, supplicantAddr)
+	}
+	if(strings.HasPrefix(msg, "Whois")) {
+		PIN := string(b[5:9])
+		fmt.Println("    >>>> received Whois " + PIN)
+		ProcessWhoisRequest(PIN, supplicantAddr)
+	}
 }
 
 func makeAddressFromIPandStrPort(ip string, port string) string {
@@ -379,7 +454,9 @@ func GeneratePIN() string {
 	return RandNumericString(4)
 }
 
-
+func GeneratePairSecret() string {
+	return RandStringRunes(24)
+}
 
 /////////////////////////////////////////////////////
 //    Initializations                              //

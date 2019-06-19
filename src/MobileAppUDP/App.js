@@ -70,25 +70,35 @@ class ConnectionStatus extends Component<Props> {
 class PairRequest extends Component<Props> {
 	
 	thisContext = null
+	PINTextInput = null
 
 	constructor(Props) {
 		super(Props)
 		this.state = {
-			pairStage: 'Not paired'
+			pairStage: 'Not paired',
+			shitState: 'shit',
+			pin: '',
 		}
 		thisContext = this
+
+		this.handleTextInputChange = this.handleTextInputChange.bind(this);
+		this.attemptPairing = this.attemptPairing.bind(this);
+		this.completePairing = this.completePairing.bind(this);
 	}
 
 	completePairing() {
-		this.setState({pairStage:'Paired'});
+		alert('complerting pairing. seding "Whois'+this.state.pin+'"')
+		var message = new Buffer("Whois"+this.state.pin);
+                socket.send(message, 0, message.length, MulticastUDPPortNumber, MulticastHost, function(err, bytes) {});
+		this.setState({pairStage:'Paired', shitState:'shit', pin:this.state.pin});
 	}	
 
 	startPairing() {
-		this.setState({pairStage:'Pairing'});
+		this.setState({pairStage:'Pairing', shitState:'shit', pin:this.state.pin});
 	}
 
 	cancelPairing() {
-		this.setState({pairStage:'Not paired'});
+		this.setState({pairStage:'Not paired', shitState:'shit', pin:this.state.pin});
 	}
 
 	requestPairing = function() {
@@ -97,8 +107,12 @@ class PairRequest extends Component<Props> {
                   thisContext.startPairing();
                 }
 
-	attemptPairing = function() {
-		alert("Attempting to pair")
+	attemptPairing() {
+		this.completePairing()
+	}
+
+	handleTextInputChange(newText) {
+    		this.setState({pairStage:this.state.pairStage, shitState:'shit', pin:newText});
 	}
 
 	render() {
@@ -114,7 +128,7 @@ class PairRequest extends Component<Props> {
 			return (
                                 <View>
                                         <Text>Introduce PIN del dispositivo:</Text>
-					<TextInput/>
+					<TextInput value={this.state.pin} onChangeText={(text) => this.handleTextInputChange(text)}/>
                                         <Button onPress={this.attemptPairing} title="Introducir" color="#2188A3" accessibilityLabel="Submit PIN"/>
                                 </View>
                         );
@@ -155,6 +169,13 @@ socket.once('listening', function() {
 socket.on('message', function(msg, rinfo) {
         if(connectionStatus != null) {
 		connectionStatus.setStatus(StatusYellow);
+	}
+	data = JSON.parse(msg)
+	if(data.serverip !== undefined) {
+		alert('Server responded with IP: ' + data.serverip)
+	}
+	if(data.deviceip !== undefined) {
+		alert('Device responded with IP: ' + data.deviceip)
 	} 
 })
 

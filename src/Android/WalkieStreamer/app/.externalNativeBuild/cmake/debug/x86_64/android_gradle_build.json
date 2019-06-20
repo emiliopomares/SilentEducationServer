@@ -1,0 +1,47 @@
+
+{
+	"buildFiles" : 
+	[
+		"/Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/CMakeLists.txt"
+	],
+	"cleanCommands" : 
+	[
+		"/Users/flandre/Library/Android/sdk/cmake/3.6.4111459/bin/cmake --build /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/.externalNativeBuild/cmake/debug/x86_64 --target clean"
+	],
+	"cppFileExtensions" : [ "cpp" ],
+	"libraries" : 
+	{
+		"WalkieStreamer-Debug-x86_64" : 
+		{
+			"abi" : "x86_64",
+			"artifactName" : "WalkieStreamer",
+			"buildCommand" : "/Users/flandre/Library/Android/sdk/cmake/3.6.4111459/bin/cmake --build /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/.externalNativeBuild/cmake/debug/x86_64 --target WalkieStreamer",
+			"buildType" : "debug",
+			"files" : 
+			[
+				
+				{
+					"flags" : "  --target=x86_64-none-linux-android21 --gcc-toolchain=/Users/flandre/Library/Android/sdk/ndk-bundle/toolchains/x86_64-4.9/prebuilt/darwin-x86_64 --sysroot=/Users/flandre/Library/Android/sdk/ndk-bundle/sysroot  -DWalkieStreamer_EXPORTS -I../../../../src/main/cpp -I../../../../../Superpowered -isystem /Users/flandre/Library/Android/sdk/ndk-bundle/sources/cxx-stl/llvm-libc++/include -isystem /Users/flandre/Library/Android/sdk/ndk-bundle/sources/cxx-stl/llvm-libc++abi/include  -isystem /Users/flandre/Library/Android/sdk/ndk-bundle/sysroot/usr/include/x86_64-linux-android -g -DANDROID -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -Wa,--noexecstack -Wformat -Werror=format-security -std=c++11 -fsigned-char -I/Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/../Superpowered -O0 -fno-limit-debug-info  -fPIC    -c ",
+					"src" : "/Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/cpp/WalkieStreamer.cpp",
+					"workingDirectory" : "/Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/.externalNativeBuild/cmake/debug/x86_64"
+				},
+				
+				{
+					"flags" : "  --target=x86_64-none-linux-android21 --gcc-toolchain=/Users/flandre/Library/Android/sdk/ndk-bundle/toolchains/x86_64-4.9/prebuilt/darwin-x86_64 --sysroot=/Users/flandre/Library/Android/sdk/ndk-bundle/sysroot  -DWalkieStreamer_EXPORTS -I../../../../src/main/cpp -I../../../../../Superpowered -isystem /Users/flandre/Library/Android/sdk/ndk-bundle/sources/cxx-stl/llvm-libc++/include -isystem /Users/flandre/Library/Android/sdk/ndk-bundle/sources/cxx-stl/llvm-libc++abi/include  -isystem /Users/flandre/Library/Android/sdk/ndk-bundle/sysroot/usr/include/x86_64-linux-android -g -DANDROID -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -Wa,--noexecstack -Wformat -Werror=format-security -std=c++11 -fsigned-char -I/Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/../Superpowered -O0 -fno-limit-debug-info  -fPIC    -c ",
+					"src" : "/Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/Superpowered/AndroidIO/SuperpoweredAndroidAudioIO.cpp",
+					"workingDirectory" : "/Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/.externalNativeBuild/cmake/debug/x86_64"
+				}
+			],
+			"output" : "/Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/build/intermediates/cmake/debug/obj/x86_64/libWalkieStreamer.so",
+			"toolchain" : "4150576942801237793"
+		}
+	},
+	"toolchains" : 
+	{
+		"4150576942801237793" : 
+		{
+			"cCompilerExecutable" : "/Users/flandre/Library/Android/sdk/ndk-bundle/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang",
+			"cppCompilerExecutable" : "/Users/flandre/Library/Android/sdk/ndk-bundle/toolchains/llvm/prebuilt/darwin-x86_64/bin/clang++"
+		}
+	}
+}

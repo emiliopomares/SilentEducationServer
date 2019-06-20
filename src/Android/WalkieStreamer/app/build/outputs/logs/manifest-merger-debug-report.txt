@@ -1,0 +1,117 @@
+-- Merging decision tree log ---
+manifest
+ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:2:1-27:12
+INJECTED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:2:1-27:12
+INJECTED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:2:1-27:12
+INJECTED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:2:1-27:12
+MERGED from [com.android.support:appcompat-v7:27.1.1] /Users/flandre/.gradle/caches/transforms-1/files-1.1/appcompat-v7-27.1.1.aar/045f6ba635e60a0971214f78d8361a68/AndroidManifest.xml:17:1-22:12
+MERGED from [com.android.support.constraint:constraint-layout:1.0.2] /Users/flandre/.gradle/caches/transforms-1/files-1.1/constraint-layout-1.0.2.aar/7d90c38fbe4ee11dc906e9e2c8ca64d1/AndroidManifest.xml:2:1-11:12
+MERGED from [com.android.support:support-fragment:27.1.1] /Users/flandre/.gradle/caches/transforms-1/files-1.1/support-fragment-27.1.1.aar/162cd50b7b9ead3eb1db32906117c0fc/AndroidManifest.xml:17:1-22:12
+MERGED from [com.android.support:animated-vector-drawable:27.1.1] /Users/flandre/.gradle/caches/transforms-1/files-1.1/animated-vector-drawable-27.1.1.aar/38c1144e7a1dd3c034630476ccf8733f/AndroidManifest.xml:17:1-22:12
+MERGED from [com.android.support:support-core-ui:27.1.1] /Users/flandre/.gradle/caches/transforms-1/files-1.1/support-core-ui-27.1.1.aar/1d15614c717e44b02df86a4d3a69e22b/AndroidManifest.xml:17:1-22:12
+MERGED from [com.android.support:support-core-utils:27.1.1] /Users/flandre/.gradle/caches/transforms-1/files-1.1/support-core-utils-27.1.1.aar/43e1ad065457a4282283facd658b649e/AndroidManifest.xml:17:1-22:12
+MERGED from [com.android.support:support-vector-drawable:27.1.1] /Users/flandre/.gradle/caches/transforms-1/files-1.1/support-vector-drawable-27.1.1.aar/13c408b5dbe5f3fad22fe138d95a4730/AndroidManifest.xml:17:1-22:12
+MERGED from [com.android.support:support-compat:27.1.1] /Users/flandre/.gradle/caches/transforms-1/files-1.1/support-compat-27.1.1.aar/b0889aee21bcb8a048e4fa54c150e8af/AndroidManifest.xml:17:1-22:12
+MERGED from [android.arch.lifecycle:livedata-core:1.1.0] /Users/flandre/.gradle/caches/transforms-1/files-1.1/livedata-core-1.1.0.aar/8e80b3b6c657ad06820a96c36b81b229/AndroidManifest.xml:17:1-22:12
+MERGED from [android.arch.lifecycle:viewmodel:1.1.0] /Users/flandre/.gradle/caches/transforms-1/files-1.1/viewmodel-1.1.0.aar/549b8bb96d2262524c8e5dc164d70215/AndroidManifest.xml:17:1-22:12
+MERGED from [android.arch.lifecycle:runtime:1.1.0] /Users/flandre/.gradle/caches/transforms-1/files-1.1/runtime-1.1.0.aar/fc3e582d29c3dac21e2a87ab6882929d/AndroidManifest.xml:17:1-22:12
+MERGED from [android.arch.core:runtime:1.1.0] /Users/flandre/.gradle/caches/transforms-1/files-1.1/runtime-1.1.0.aar/e8f58bca01630beccc86abd0d2967de3/AndroidManifest.xml:17:1-22:12
+INJECTED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:2:1-27:12
+INJECTED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:2:1-27:12
+INJECTED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:2:1-27:12
+	package
+		ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:3:5-43
+		INJECTED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml
+		INJECTED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml
+	android:versionName
+		INJECTED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml
+		ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:2:1-27:12
+		INJECTED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml
+	android:versionCode
+		INJECTED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml
+		ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:2:1-27:12
+		INJECTED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml
+	xmlns:android
+		ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:2:11-69
+uses-permission#android.permission.RECORD_AUDIO
+ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:5:5-71
+	android:name
+		ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:5:22-68
+uses-permission#android.permission.WRITE_EXTERNAL_STORAGE
+ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:6:5-81
+	android:name
+		ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:6:22-78
+uses-permission#android.permission.INTERNET
+ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:7:5-67
+	android:name
+		ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:7:22-64
+application
+ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:9:5-25:19
+MERGED from [com.android.support.constraint:constraint-layout:1.0.2] /Users/flandre/.gradle/caches/transforms-1/files-1.1/constraint-layout-1.0.2.aar/7d90c38fbe4ee11dc906e9e2c8ca64d1/AndroidManifest.xml:9:5-20
+MERGED from [com.android.support.constraint:constraint-layout:1.0.2] /Users/flandre/.gradle/caches/transforms-1/files-1.1/constraint-layout-1.0.2.aar/7d90c38fbe4ee11dc906e9e2c8ca64d1/AndroidManifest.xml:9:5-20
+	android:supportsRtl
+		ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:14:9-35
+	android:label
+		ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:12:9-41
+	android:roundIcon
+		ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:13:9-54
+	android:icon
+		ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:11:9-43
+	android:allowBackup
+		ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:10:9-35
+	android:theme
+		ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:15:9-40
+activity#com.silenteducation.streamer.MainActivity
+ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:16:9-24:20
+	android:configChanges
+		ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:18:13-74
+	android:name
+		ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:17:13-41
+intent-filter#action:name:android.intent.action.MAIN+category:name:android.intent.category.LAUNCHER
+ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:19:13-23:29
+action#android.intent.action.MAIN
+ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:20:17-69
+	android:name
+		ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:20:25-66
+category#android.intent.category.LAUNCHER
+ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:22:17-77
+	android:name
+		ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml:22:27-74
+uses-sdk
+INJECTED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml reason: use-sdk injection requested
+INJECTED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml
+INJECTED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml
+MERGED from [com.android.support:appcompat-v7:27.1.1] /Users/flandre/.gradle/caches/transforms-1/files-1.1/appcompat-v7-27.1.1.aar/045f6ba635e60a0971214f78d8361a68/AndroidManifest.xml:20:5-44
+MERGED from [com.android.support:appcompat-v7:27.1.1] /Users/flandre/.gradle/caches/transforms-1/files-1.1/appcompat-v7-27.1.1.aar/045f6ba635e60a0971214f78d8361a68/AndroidManifest.xml:20:5-44
+MERGED from [com.android.support.constraint:constraint-layout:1.0.2] /Users/flandre/.gradle/caches/transforms-1/files-1.1/constraint-layout-1.0.2.aar/7d90c38fbe4ee11dc906e9e2c8ca64d1/AndroidManifest.xml:5:5-7:41
+MERGED from [com.android.support.constraint:constraint-layout:1.0.2] /Users/flandre/.gradle/caches/transforms-1/files-1.1/constraint-layout-1.0.2.aar/7d90c38fbe4ee11dc906e9e2c8ca64d1/AndroidManifest.xml:5:5-7:41
+MERGED from [com.android.support:support-fragment:27.1.1] /Users/flandre/.gradle/caches/transforms-1/files-1.1/support-fragment-27.1.1.aar/162cd50b7b9ead3eb1db32906117c0fc/AndroidManifest.xml:20:5-44
+MERGED from [com.android.support:support-fragment:27.1.1] /Users/flandre/.gradle/caches/transforms-1/files-1.1/support-fragment-27.1.1.aar/162cd50b7b9ead3eb1db32906117c0fc/AndroidManifest.xml:20:5-44
+MERGED from [com.android.support:animated-vector-drawable:27.1.1] /Users/flandre/.gradle/caches/transforms-1/files-1.1/animated-vector-drawable-27.1.1.aar/38c1144e7a1dd3c034630476ccf8733f/AndroidManifest.xml:20:5-44
+MERGED from [com.android.support:animated-vector-drawable:27.1.1] /Users/flandre/.gradle/caches/transforms-1/files-1.1/animated-vector-drawable-27.1.1.aar/38c1144e7a1dd3c034630476ccf8733f/AndroidManifest.xml:20:5-44
+MERGED from [com.android.support:support-core-ui:27.1.1] /Users/flandre/.gradle/caches/transforms-1/files-1.1/support-core-ui-27.1.1.aar/1d15614c717e44b02df86a4d3a69e22b/AndroidManifest.xml:20:5-44
+MERGED from [com.android.support:support-core-ui:27.1.1] /Users/flandre/.gradle/caches/transforms-1/files-1.1/support-core-ui-27.1.1.aar/1d15614c717e44b02df86a4d3a69e22b/AndroidManifest.xml:20:5-44
+MERGED from [com.android.support:support-core-utils:27.1.1] /Users/flandre/.gradle/caches/transforms-1/files-1.1/support-core-utils-27.1.1.aar/43e1ad065457a4282283facd658b649e/AndroidManifest.xml:20:5-44
+MERGED from [com.android.support:support-core-utils:27.1.1] /Users/flandre/.gradle/caches/transforms-1/files-1.1/support-core-utils-27.1.1.aar/43e1ad065457a4282283facd658b649e/AndroidManifest.xml:20:5-44
+MERGED from [com.android.support:support-vector-drawable:27.1.1] /Users/flandre/.gradle/caches/transforms-1/files-1.1/support-vector-drawable-27.1.1.aar/13c408b5dbe5f3fad22fe138d95a4730/AndroidManifest.xml:20:5-44
+MERGED from [com.android.support:support-vector-drawable:27.1.1] /Users/flandre/.gradle/caches/transforms-1/files-1.1/support-vector-drawable-27.1.1.aar/13c408b5dbe5f3fad22fe138d95a4730/AndroidManifest.xml:20:5-44
+MERGED from [com.android.support:support-compat:27.1.1] /Users/flandre/.gradle/caches/transforms-1/files-1.1/support-compat-27.1.1.aar/b0889aee21bcb8a048e4fa54c150e8af/AndroidManifest.xml:20:5-44
+MERGED from [com.android.support:support-compat:27.1.1] /Users/flandre/.gradle/caches/transforms-1/files-1.1/support-compat-27.1.1.aar/b0889aee21bcb8a048e4fa54c150e8af/AndroidManifest.xml:20:5-44
+MERGED from [android.arch.lifecycle:livedata-core:1.1.0] /Users/flandre/.gradle/caches/transforms-1/files-1.1/livedata-core-1.1.0.aar/8e80b3b6c657ad06820a96c36b81b229/AndroidManifest.xml:20:5-44
+MERGED from [android.arch.lifecycle:livedata-core:1.1.0] /Users/flandre/.gradle/caches/transforms-1/files-1.1/livedata-core-1.1.0.aar/8e80b3b6c657ad06820a96c36b81b229/AndroidManifest.xml:20:5-44
+MERGED from [android.arch.lifecycle:viewmodel:1.1.0] /Users/flandre/.gradle/caches/transforms-1/files-1.1/viewmodel-1.1.0.aar/549b8bb96d2262524c8e5dc164d70215/AndroidManifest.xml:20:5-44
+MERGED from [android.arch.lifecycle:viewmodel:1.1.0] /Users/flandre/.gradle/caches/transforms-1/files-1.1/viewmodel-1.1.0.aar/549b8bb96d2262524c8e5dc164d70215/AndroidManifest.xml:20:5-44
+MERGED from [android.arch.lifecycle:runtime:1.1.0] /Users/flandre/.gradle/caches/transforms-1/files-1.1/runtime-1.1.0.aar/fc3e582d29c3dac21e2a87ab6882929d/AndroidManifest.xml:20:5-44
+MERGED from [android.arch.lifecycle:runtime:1.1.0] /Users/flandre/.gradle/caches/transforms-1/files-1.1/runtime-1.1.0.aar/fc3e582d29c3dac21e2a87ab6882929d/AndroidManifest.xml:20:5-44
+MERGED from [android.arch.core:runtime:1.1.0] /Users/flandre/.gradle/caches/transforms-1/files-1.1/runtime-1.1.0.aar/e8f58bca01630beccc86abd0d2967de3/AndroidManifest.xml:20:5-44
+MERGED from [android.arch.core:runtime:1.1.0] /Users/flandre/.gradle/caches/transforms-1/files-1.1/runtime-1.1.0.aar/e8f58bca01630beccc86abd0d2967de3/AndroidManifest.xml:20:5-44
+INJECTED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml
+INJECTED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml
+	android:targetSdkVersion
+		INJECTED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml
+		ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml
+		INJECTED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml
+	android:minSdkVersion
+		INJECTED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml
+		ADDED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml
+		INJECTED from /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/src/main/AndroidManifest.xml

@@ -1,0 +1,16 @@
+{
+  "buildFiles": [
+    "/Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/CMakeLists.txt"
+  ],
+  "cleanCommands": [
+    "/Users/flandre/Library/Android/sdk/cmake/3.6.4111459/bin/cmake --build /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/.externalNativeBuild/cmake/release/x86 --target clean"
+  ],
+  "libraries": {
+    "WalkieStreamer-Release-x86": {
+      "artifactName": "WalkieStreamer",
+      "buildCommand": "/Users/flandre/Library/Android/sdk/cmake/3.6.4111459/bin/cmake --build /Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/.externalNativeBuild/cmake/release/x86 --target WalkieStreamer",
+      "abi": "x86",
+      "output": "/Users/flandre/code/SilentEducationServer/src/Android/WalkieStreamer/app/build/intermediates/cmake/release/obj/x86/libWalkieStreamer.so"
+    }
+  }
+}

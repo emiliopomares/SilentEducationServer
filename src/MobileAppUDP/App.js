@@ -8,6 +8,8 @@
 
 import React, {Component} from 'react';
 import {Platform, StyleSheet, Button, Text, TextInput, Image, View} from 'react-native';
+import { AsyncStorage } from 'react-native'
+import Slider from "react-native-slider";
 
 global.Buffer = global.Buffer || require('buffer').Buffer
 
@@ -24,6 +26,11 @@ const StatusYellow = require('./assets/yellow.png')
 const StatusGreen = require('./assets/green.png')
 
 
+// schema for the prototype: simple PSK, better than nothing!
+// @TODO send this to a env variable
+const SilentEducationPSK = "4baUV/2T=1a4nGrDS43FGnv6100asRNa35+shd/2b42300aNUFHsdn2m3iUJ86B/d2"
+
+
 const MulticastHost = '224.0.0.1';
 
 var message = new Buffer('supplicant');
@@ -36,7 +43,7 @@ client.send(message, 0, message.length, 9191, MulticastHost, function(err, bytes
 });
 
 var connectionStatus = null
-
+var statusLabel = null
 
 const instructions = Platform.select({
   ios: 'Press Cmd+R to reload,\n' + 'Cmd+D or shake for dev menu',
@@ -47,6 +54,36 @@ const instructions = Platform.select({
 
 type Props = {};
 
+var AppInfo = 
+  {
+
+	deviceIP : '',
+	pairSecret: '',
+	lastKnownName: '',
+        serverIP: '',
+
+  }
+
+class MutableLabel extends Component<Props> {
+	constructor(Props) {
+		super(Props)
+		this.state = {
+			text : ''
+		}
+		this.setLabel = this.setLabel.bind(this)
+	}
+
+	setLabel(newText) {
+		this.setState({text:newText})
+	}
+
+	render() {
+		return (
+			<Text>{this.state.text}</Text>
+		);
+	}
+	
+}
 
 class ConnectionStatus extends Component<Props> {
         constructor(Props) {
@@ -142,12 +179,36 @@ class PairRequest extends Component<Props> {
 
 
 export default class App extends Component<Props> {
+  constructor(Props) {
+	super(Props)
+	this.state = {
+		value: 0
+	}
+  }
+
+  componentDidMount() {
+
+	loadAppInfo().then( function() {
+		if(AppInfo.pairSecret == '') {
+			statusLabel.setLabel('No emparejado')
+		} 
+		else {
+			statusLabel.setLabel('Emparejado con: ' + AppInfo.lastKnownName)
+		}
+	})
+
+  }
 
   render() {
     return (
       <View style={styles.container}>
+	<MutableLabel ref={(c) => statusLabel = c}/>
 	<PairRequest/>
 	<ConnectionStatus ref={(c) => connectionStatus = c}/>
+	<Slider
+          value={this.state.value}
+          onValueChange={value => this.setState({ value })}
+        />
         <Text style={styles.welcome}>Welcome to React Native!</Text>
         <Text style={styles.instructions}>To get started, edit App.js</Text>
         <Text style={styles.instructions}>{instructions}</Text>
@@ -166,6 +227,7 @@ socket.once('listening', function() {
 	}
 })
 
+
 socket.on('message', function(msg, rinfo) {
         if(connectionStatus != null) {
 		connectionStatus.setStatus(StatusYellow);
@@ -173,11 +235,107 @@ socket.on('message', function(msg, rinfo) {
 	data = JSON.parse(msg)
 	if(data.serverip !== undefined) {
 		alert('Server responded with IP: ' + data.serverip)
+		AppInfo.serverIP = data.serverip
 	}
 	if(data.deviceip !== undefined) {
-		alert('Device responded with IP: ' + data.deviceip)
+		AppInfo.deviceIP = data.deviceip
+		url = 'http://' + AppInfo.deviceIP + ':8000/pairing'
+		//alert('Device responded with IP: ' + data.deviceip + '. Requesting ' + url)
+		POST(url, "", function(data) {
+			AppInfo.pairSecret = data.secret
+			connectionStatus.setStatus(StatusGreen)
+			statusUrl = 'http://' + AppInfo.deviceIP + ':8000/status'
+			GET(statusUrl, function(status) {
+				statusLabel.setLabel('Conectado a ' + status.name)
+				AppInfo.lastKnownName = status.name
+				saveAppInfo()
+			})
+		})
 	} 
 })
+
+async function updateConnectionStatus() {
+	// find out about server
+	// find out about device
+}
+
+async function saveAppInfo() {
+	try {
+            await AsyncStorage.setItem('DeviceIP', AppInfo.deviceIP);
+        } catch (error) {
+           alert('Error guardando datos: ' + error) 
+        }	
+
+	try {
+            await AsyncStorage.setItem('PairSecret', AppInfo.pairSecret);
+        } catch (error) {
+           alert('Error guardando datos: ' + error)
+        }
+
+	try {
+            await AsyncStorage.setItem('LastKnownName', AppInfo.lastKnownName);
+        } catch (error) {
+           alert('Error guardando datos: ' + error)
+        }
+}
+
+async function loadAppInfo() {
+	try {
+            const value = await AsyncStorage.getItem('DeviceIP');
+            if (value !== null) {
+            	AppInfo.deviceIP = value
+	    }
+        } catch (error) {
+            alert('Error cargando datos: ' + error)
+        }
+
+	try {
+            const value = await AsyncStorage.getItem('PairSecret');
+            if (value !== null) {
+                AppInfo.pairSecret = value
+            }
+        } catch (error) {
+            alert('Error cargando datos: ' + error)
+        }
+
+ 	try {
+            const value = await AsyncStorage.getItem('LastKnownName');
+            if (value !== null) {
+                AppInfo.lastKnownName = value
+            }
+        } catch (error) {
+            alert('Error cargando datos: ' + error)
+        }
+}
+
+function GET(url, callback) {
+	const options = {
+		method: 'GET',
+		headers: new Headers({'psk':SilentEducationPSK}),
+	}
+	fetch(url, options).then(response => response.json()).then( (data) => callback(data) )
+}
+
+function POST(url, body, callback) {
+	const options = {
+		method: 'POST',
+		headers: new Headers(
+			{
+				'psk':SilentEducationPSK,
+				'Content-Type': 'application/x-www-form-urlencoded'
+			}),
+		body: body
+	}
+	fetch(url, options).then(response => response.json()).then((data)=>callback(data))
+}
+
+function DELETE(url, callback) {
+
+}
+
+function PUT(url, body, callback) {
+
+}
 
 const styles = StyleSheet.create({
   container: {

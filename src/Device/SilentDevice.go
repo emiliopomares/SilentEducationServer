@@ -25,7 +25,7 @@ import (
 
 const MulticastUDPPort string = "9191"
 const UnicastUDPPort string = "9190"
-const RESTPort string = "9192"
+const RESTPort string = "8000"
 
 // schema for the prototype: simple PSK, better than nothing!
 const SilentEducationPSK = "4baUV/2T=1a4nGrDS43FGnv6100asRNa35+shd/2b42300aNUFHsdn2m3iUJ86B/d2"
@@ -134,7 +134,7 @@ func LoadDeviceConfigFromFile() {
 //    Temp REST API                                //
 /////////////////////////////////////////////////////
 
-func withPSKCheck(next http.HandlerFunc) http.HandlerFunc {
+func WithPSKCheck(next http.HandlerFunc) http.HandlerFunc {
         return func(w http.ResponseWriter, r *http.Request) {
                 psk := r.Header.Get("psk")
                 if psk == SilentEducationPSK {
@@ -179,15 +179,21 @@ func UpdateStatus(w http.ResponseWriter, r *http.Request) {
         JSONResponseFromString(w, "{\"result\":\"success\"}")
 }
 
+func Healthcheck(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("GET /healthcheck")
+	JSONResponseFromString(w, "{\"alive\":true}")
+}
+
 func setupRESTAPI() {
 	r := mux.NewRouter()
-	r.HandleFunc("/serverip", GetServerIP).Methods("GET")
-	r.HandleFunc("/status", GetStatus).Methods("GET")
-	r.HandleFunc("/status", UpdateStatus).Methods("PUT")
-	r.HandleFunc("/pairing", CreatePairing).Methods("POST")
-	r.HandleFunc("/pairing", DeletePairing).Methods("DELETE")
+	r.HandleFunc("/serverip", WithPSKCheck(GetServerIP)).Methods("GET")
+	r.HandleFunc("/status", WithPSKCheck(GetStatus)).Methods("GET")
+	r.HandleFunc("/status", WithPSKCheck(UpdateStatus)).Methods("PUT")
+	r.HandleFunc("/pairing", WithPSKCheck(CreatePairing)).Methods("POST")
+	r.HandleFunc("/pairing", WithPSKCheck(DeletePairing)).Methods("DELETE")
 	r.HandleFunc("/pairing", CheckPairing).Methods("GET")
-	http.ListenAndServe(":8000", r)
+	r.HandleFunc("/healthcheck", Healthcheck).Methods("GET")
+	http.ListenAndServe(":"+RESTPort, r)
 }
 
 
@@ -199,6 +205,7 @@ func setupRESTAPI() {
 func CreatePairing(w http.ResponseWriter, r *http.Request) {
 	deviceInfo.PairedDevices++
 	SaveDeviceConfigToFile()
+	fmt.Println("   >> Pairing created. Paired to " + strconv.Itoa(deviceInfo.PairedDevices) + " devices now")
 	JSONResponseFromString(w, "{\"secret\":\""+deviceInfo.PairSecret+"\"}")
 }
 
@@ -211,6 +218,7 @@ func DeletePairing(w http.ResponseWriter, r *http.Request) {
 }
 
 func CheckPairing(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("   >> CheckPairing called with psk: " + r.Header.Get("psk"))
 	Secret := r.URL.Query()["s"][0]
 	if(Secret == deviceInfo.PairSecret) {
 		JSONResponseFromString(w, "{\"result\":true}")
@@ -277,12 +285,19 @@ func SendTextWS(msg string) {
 /////////////////////////////////////////////////////
 
 func ProcessPairRequest() {
-	newPIN := GeneratePIN()
-	newSecret := GeneratePairSecret()
-	deviceInfo.PairPIN = newPIN
-	deviceInfo.PairSecret = newSecret
-	fmt.Println("Pair request received. PIN: " + newPIN)
-	SaveDeviceConfigToFile()
+	var PINtoShow string
+	if(deviceInfo.PairedDevices == 0) {
+		newPIN := GeneratePIN()
+		newSecret := GeneratePairSecret()
+		deviceInfo.PairPIN = newPIN
+		deviceInfo.PairSecret = newSecret
+		SaveDeviceConfigToFile()
+		PINtoShow = newPIN
+	} else {
+		PINtoShow = deviceInfo.PairPIN
+	} 
+	fmt.Println("   >> Pair request received. PIN: " + PINtoShow)
+	
 }
 
 func ProcessRespondRequest(Secret string, supplicantAddr string) {
@@ -298,6 +313,22 @@ func ProcessRespondRequest(Secret string, supplicantAddr string) {
         c.Write([]byte("{\"serverip\":\"" + LocalIP + "\"}"))
 }
 
+func ProcessWhoseSecret(Secret string, supplicantAddr string) {
+        if(Secret == deviceInfo.PairSecret) {
+                addr, err := net.ResolveUDPAddr("udp", makeAddressFromIPandStrPort(supplicantAddr, UnicastUDPPort))
+                if err != nil {
+                        fmt.Println("Error")
+                        log.Fatal(err)
+                }
+                c, err := net.DialUDP("udp", nil, addr)
+                if err != nil {
+                        fmt.Println("Error")
+                        log.Fatal(err)
+                }
+                LocalIP := GetLocalIP()
+                c.Write([]byte("{\"deviceip\":\"" + LocalIP + "\"}"))
+        }
+}
 
 func ProcessWhoisRequest(PIN string, supplicantAddr string) {
 	if(PIN == deviceInfo.PairPIN) {

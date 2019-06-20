@@ -12,6 +12,8 @@ import (
 
 const UnicastUDPPort string = "9190"
 
+const bufferSize = 16
+
 func int16SliceAsByteSlice(arr []int16) []byte {
 	lf := 2 * len(arr)
 
@@ -51,17 +53,20 @@ func main() {
 
 	portaudio.Initialize()
 	defer portaudio.Terminate()
-	in := make([]int16, 48)
+	in := make([]int16, bufferSize)
 	inBytes := int16SliceAsByteSlice(in)
-	stream, err := portaudio.OpenDefaultStream(1, 0, 22050, len(in), in)
+	stream, err := portaudio.OpenDefaultStream(1, 0, 8000, len(in), in)
 	chk(err)
 	defer stream.Close()
 
+	npackets := 0
 	chk(stream.Start())
 	for {
 		chk(stream.Read())
 		//chk(binary.Write(f, binary.BigEndian, in))
 		c.Write(inBytes)
+		fmt.Println("Packets sent: ", npackets) 
+		npackets++
 		nSamples += len(in)
 		select {
 		case <-sig:

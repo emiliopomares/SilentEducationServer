@@ -11,6 +11,7 @@ package main
 import (
 	"fmt"
 //	"os"
+	"strconv"
 	"math"
 	"net"
 	"github.com/gordonklaus/portaudio"
@@ -24,7 +25,7 @@ const nBanks = 4
 const bufferSize = 48
 //96
 
-const sampleRate = 8000
+const sampleRate = 22050
 //8000
 const bytesPerSample = 2
 const numberOfChannels = 1
@@ -51,7 +52,7 @@ func main() {
 	// networking
 	
 	//Basic variables
-	port := ":8080"
+	port := ":9190"
 	protocol := "udp"
 
 	//Build the address
@@ -112,9 +113,9 @@ func addData(conn *net.UDPConn) {
 	var maxShortVal int16 = 0
 	var buf [2048]byte
 	n, err := conn.Read(buf[0:])
-	//fmt.Printf("%d bytes received\n", n)
+	fmt.Printf("%d bytes received\n", n)
 	if n != bufferSize * bytesPerSample * numberOfChannels {
-		fmt.Println("Packet dropped")
+		fmt.Println("Packet dropped, should be length: " + strconv.Itoa(bufferSize * bytesPerSample * numberOfChannels))
 		return
 	}
 	if err != nil {

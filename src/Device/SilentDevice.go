@@ -463,7 +463,7 @@ func unicastMsgHandler(src *net.UDPAddr, n int, b []byte) {
 	var NewServerInfo ServerInfo
 	err := json.Unmarshal(b[:n], &NewServerInfo)
 	success := false
-	if err == nil {
+	if (err == nil) && (NewServerInfo.ServerIP != "") {
 		serverIP := NewServerInfo.ServerIP
                 serverIPknown = true
                 serverInfo.ServerIP = serverIP
@@ -471,7 +471,7 @@ func unicastMsgHandler(src *net.UDPAddr, n int, b []byte) {
                 SendHandshakeToServer()
 		success = true
 	} 
-	
+	fmt.Println("    >>>> ... was not server info")	
 	var NewPingInfo PingInfo
 	err = json.Unmarshal(b[:n], &NewPingInfo)
 	if err == nil {

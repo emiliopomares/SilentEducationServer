@@ -389,7 +389,7 @@ func Ping(dest string) int {
 }
 
 func ProcessPing(n int, srcAddr string) {
-	fmt.Println("    >> ProcessPing " + strconv.Itoa(n) + " " + addr + " called")
+	fmt.Println("    >> ProcessPing " + strconv.Itoa(n) + " " + srcAddr + " called")
         if n == 0 {
                 ping.Lock()
                 ping.cond.Signal()

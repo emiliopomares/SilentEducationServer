@@ -191,6 +191,17 @@ func Healthcheck(w http.ResponseWriter, r *http.Request) {
 	JSONResponseFromString(w, "{\"alive\":true}")
 }
 
+func HandlePing(w http.ResponseWriter, r *http.Request) {
+        vars := mux.Vars(r)
+	if(vars["ip"] != "") {
+		fmt.Println("Requesting ping to: " + vars["ip"])
+		delay := Ping(vars["ip"])
+        	JSONResponseFromString(w, "{\"result\":"+strconv.Itoa(delay)+"}")
+	} else {
+		JSONResponseFromStringAndCode(w, "{\"error\":\"destination ip not specified\"}", 400)
+	}
+}
+
 func setupRESTAPI() {
 	r := mux.NewRouter()
 	r.HandleFunc("/serverip", WithPSKCheck(GetServerIP)).Methods("GET")
@@ -200,6 +211,7 @@ func setupRESTAPI() {
 	r.HandleFunc("/pairing", WithPSKCheck(DeletePairing)).Methods("DELETE")
 	r.HandleFunc("/pairing", CheckPairing).Methods("GET")
 	r.HandleFunc("/healthcheck", Healthcheck).Methods("GET")
+	r.HandleFunc("/ping/{ip}", WithPSKCheck(HandlePing)).Methods("GET")
 	http.ListenAndServe(":"+RESTPort, r)
 }
 
@@ -372,10 +384,12 @@ func CreatePingAvailable() *PingAvailable {
 var ping *PingAvailable
 
 func Ping(dest string) int {
+	fmt.Println("    >> Ping "+ dest + "called")
 	return PingN(1, dest)
 }
 
 func ProcessPing(n int, srcAddr string) {
+	fmt.Println("    >> ProcessPing " + strconv.Itoa(n) + " " + addr + " called")
         if n == 0 {
                 ping.Lock()
                 ping.cond.Signal()
@@ -386,11 +400,14 @@ func ProcessPing(n int, srcAddr string) {
 }
 
 func PingN(n int, addr string) int {
+	fmt.Println("    >> PingN " + strconv.Itoa(n) + " " + addr + " called")
         start := time.Now()
         SendPing(1, addr)
         func(p *PingAvailable) {
                 p.Lock()
+		fmt.Println("     >>> ... starting wait for ping response ")
                 p.cond.Wait()
+		fmt.Println("     >>> ... ping response received! ")
                 p.Unlock()
                 return
         }(ping)
@@ -400,13 +417,14 @@ func PingN(n int, addr string) int {
 }
 
 func SendPing(n int, destAddr string) {
+	fmt.Println("   >> SendPing " + strconv.Itoa(n) + " " + destAddr + " called")
         addr, err := net.ResolveUDPAddr("udp", makeAddressFromIPandStrPort(destAddr, UnicastUDPPort))
         if err != nil {
                 fmt.Println("Error")
                 log.Fatal(err)
         }
         c, err := net.DialUDP("udp", nil, addr)
-        fmt.Println("Sending ping...")
+        fmt.Println("   >>>  .... actually Sending ping...")
         c.Write([]byte("{ping:"+strconv.Itoa(n)+"}"))
 }
 
@@ -443,19 +461,26 @@ func SendHandshakeToServer() {
 func unicastMsgHandler(src *net.UDPAddr, n int, b []byte) {
 	var NewServerInfo ServerInfo
 	err := json.Unmarshal(b[:n], &NewServerInfo)
+	success := false
 	if err == nil {
 		serverIP := NewServerInfo.ServerIP
                 serverIPknown = true
                 serverInfo.ServerIP = serverIP
                 fmt.Println("Server IP is set to " + serverIP)
                 SendHandshakeToServer()
-		return
+		success = true
 	} 
 	
 	var NewPingInfo PingInfo
 	err = json.Unmarshal(b[:n], &NewPingInfo)
 	if err == nil {
+		fmt.Println("      >>>>     unicastMsgHandler: received ping!")
 		ProcessPing(NewPingInfo.Ping, src.IP.String())
+		success = true
+	}
+
+	if success == false {
+		fmt.Println("   >>> something was received, but no match")
 	}
 
 }

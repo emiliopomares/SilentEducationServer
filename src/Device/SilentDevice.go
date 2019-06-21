@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"encoding/json"
 	"math/rand"
+	"sync"
 	"github.com/gorilla/mux"
 	"github.com/sacOO7/gowebsocket"
 	"log"
@@ -25,6 +26,8 @@ import (
 
 const MulticastUDPPort string = "9191"
 const UnicastUDPPort string = "9190"
+const AppAudioPort = "9192"
+const ServerAudioPort = "9193"
 const RESTPort string = "8000"
 
 // schema for the prototype: simple PSK, better than nothing!
@@ -32,6 +35,10 @@ const SilentEducationPSK = "4baUV/2T=1a4nGrDS43FGnv6100asRNa35+shd/2b42300aNUFHs
 
 type ServerInfo struct {
 	ServerIP	string	`json:"serverip"`
+}
+
+type PingInfo struct {
+	Ping		int	`json:"ping"`
 }
 
 type DeviceInfo struct {
@@ -348,8 +355,65 @@ func ProcessWhoisRequest(PIN string, supplicantAddr string) {
 }
 
 /////////////////////////////////////////////////////
+//    Network utils                                //
+/////////////////////////////////////////////////////
+
+type PingAvailable struct {
+        sync.Mutex
+        cond *sync.Cond
+}
+
+func CreatePingAvailable() *PingAvailable {
+        p := PingAvailable{}
+        p.cond = sync.NewCond(&p)
+        return &p
+}
+
+var ping *PingAvailable
+
+func Ping(dest string) int {
+	return PingN(1, dest)
+}
+
+func ProcessPing(n int, srcAddr string) {
+        if n == 0 {
+                ping.Lock()
+                ping.cond.Signal()
+                ping.Unlock()
+        } else {
+                SendPing(n-1, srcAddr)
+        }
+}
+
+func PingN(n int, addr string) int {
+        start := time.Now()
+        SendPing(1, addr)
+        func(p *PingAvailable) {
+                p.Lock()
+                p.cond.Wait()
+                p.Unlock()
+                return
+        }(ping)
+        t := time.Now()
+        elapsed := t.Sub(start)
+        return int(elapsed/1000000)
+}
+
+func SendPing(n int, destAddr string) {
+        addr, err := net.ResolveUDPAddr("udp", makeAddressFromIPandStrPort(destAddr, UnicastUDPPort))
+        if err != nil {
+                fmt.Println("Error")
+                log.Fatal(err)
+        }
+        c, err := net.DialUDP("udp", nil, addr)
+        fmt.Println("Sending ping...")
+        c.Write([]byte("{ping:"+strconv.Itoa(n)+"}"))
+}
+
+/////////////////////////////////////////////////////
 //    Server discovery                             //
 /////////////////////////////////////////////////////
+
 
 func discoverServerIP() {
 	addr, err := net.ResolveUDPAddr("udp", makeAddressFromIPandStrPort(MulticastAddr, MulticastUDPPort))
@@ -376,18 +440,24 @@ func SendHandshakeToServer() {
 	SendTextWS(string(bytes))
 }
 
-func msgHandler(src *net.UDPAddr, n int, b []byte) {
+func unicastMsgHandler(src *net.UDPAddr, n int, b []byte) {
 	var NewServerInfo ServerInfo
 	err := json.Unmarshal(b[:n], &NewServerInfo)
-	if err != nil {
-		fmt.Println("Error parsing response from server: " + err.Error())
-	} else {
+	if err == nil {
 		serverIP := NewServerInfo.ServerIP
-		serverIPknown = true
-		serverInfo.ServerIP = serverIP
-		fmt.Println("Server IP is set to " + serverIP)
-		SendHandshakeToServer()
+                serverIPknown = true
+                serverInfo.ServerIP = serverIP
+                fmt.Println("Server IP is set to " + serverIP)
+                SendHandshakeToServer()
+		return
+	} 
+	
+	var NewPingInfo PingInfo
+	err = json.Unmarshal(b[:n], &NewPingInfo)
+	if err == nil {
+		ProcessPing(NewPingInfo.Ping, src.IP.String())
 	}
+
 }
 
 func multicastMsgHandler(src *net.UDPAddr, n int, b []byte) {
@@ -422,7 +492,7 @@ func listenMulticastUDP() {
 }
 
 func listenUnicastUDP() {
-	serveUnicastUDP(makeAddressFromIPandStrPort(MulticastAddr, UnicastUDPPort), msgHandler)
+	serveUnicastUDP(makeAddressFromIPandStrPort(MulticastAddr, UnicastUDPPort), unicastMsgHandler)
 }
 
 func serveMulticastUDP(a string, h func(*net.UDPAddr, int, []byte)) {
@@ -498,6 +568,8 @@ func initializeDevice() {
 	serverInfo = &ServerInfo{}
 	serverIPknown = false
 	LoadDeviceConfigFromFile()
+	ping = CreatePingAvailable()
+	StartAudio()
 	go listenUnicastUDP()
 	go listenMulticastUDP()
 	go discoverServerIP()
@@ -506,6 +578,18 @@ func initializeDevice() {
 func initializeRandom() {
     rand.Seed(time.Now().UnixNano())
 }
+
+
+/////////////////////////////////////////////////////
+//    Audio                                        //
+/////////////////////////////////////////////////////
+
+func StartAudio() {
+
+}
+
+
+
 
 
 

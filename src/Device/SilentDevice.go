@@ -425,7 +425,7 @@ func SendPing(n int, destAddr string) {
         }
         c, err := net.DialUDP("udp", nil, addr)
         fmt.Println("   >>>  .... actually Sending ping...")
-        c.Write([]byte("{ping:"+strconv.Itoa(n)+"}"))
+        c.Write([]byte("{\"ping\":"+strconv.Itoa(n)+"}"))
 }
 
 /////////////////////////////////////////////////////
@@ -459,6 +459,7 @@ func SendHandshakeToServer() {
 }
 
 func unicastMsgHandler(src *net.UDPAddr, n int, b []byte) {
+	fmt.Println("       >>>>>   unicast handler received: " + string(b[:n]))
 	var NewServerInfo ServerInfo
 	err := json.Unmarshal(b[:n], &NewServerInfo)
 	success := false

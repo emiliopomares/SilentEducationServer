@@ -624,7 +624,7 @@ func RandNumericString(n int) string {
 
 func main() {
 	initializeDevice()
-	fmt.Println("Device initialized")
+	fmt.Println("Device initialized @ " + GetLocalIP())
 	if(deviceInfo.PairPIN != "") {
 		fmt.Println("Pair PIN for this device: " + deviceInfo.PairPIN)
 	}

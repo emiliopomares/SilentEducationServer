@@ -31,8 +31,8 @@ void diep(const char *s)
     perror(s);
     exit(1);
 }
-#define SRV_IP "192.168.1.43"
-#define PORT 8080
+#define SRV_IP "192.168.1.123"
+#define PORT 9190
 
 struct sockaddr_in si_other;
 int s, i, slen;
@@ -83,7 +83,7 @@ Java_com_silenteducation_streamer_MainActivity_connect(
     memset((char *)&si_other, 0, sizeof(si_other));
     si_other.sin_family = AF_INET;
     si_other.sin_port = htons((unsigned int)port);
-    if(inet_aton("192.168.1.43", &si_other.sin_addr)==0) {
+    if(inet_aton("192.168.1.123", &si_other.sin_addr)==0) {
         std::string response = "could not parse address";
         return env->NewStringUTF(response.c_str());
     }

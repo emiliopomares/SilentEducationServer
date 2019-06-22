@@ -123,7 +123,7 @@ func addData(conn *net.UDPConn) {
 	var maxShortVal int16 = 0
 	var buf [2048]byte
 	n, err := conn.Read(buf[0:])
-//	fmt.Printf("%d bytes received\n", n)
+	fmt.Printf("%d bytes received\n", n)
 	if n != bufferSize * bytesPerSample * numberOfChannels {
 		fmt.Println("Packet dropped, should be length: " + strconv.Itoa(bufferSize * bytesPerSample * numberOfChannels))
 		return

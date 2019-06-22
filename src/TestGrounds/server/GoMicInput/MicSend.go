@@ -43,14 +43,16 @@ func main() {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt, os.Kill)
 
+	fmt.Println("Hasta aquí")
 	nSamples := 0
-
+	
 	addr, err := net.ResolveUDPAddr("udp", os.Args[1] + ":" + UnicastUDPPort)
 	if err != nil {
 		log.Fatal(err)
 	}
 	c, err := net.DialUDP("udp", nil, addr)
 
+	fmt.Println("Initializing portaudio")
 	portaudio.Initialize()
 	defer portaudio.Terminate()
 	in := make([]int16, bufferSize)
@@ -61,6 +63,7 @@ func main() {
 
 	npackets := 0
 	chk(stream.Start())
+	fmt.Println("Stream started")
 	for {
 		chk(stream.Read())
 		//chk(binary.Write(f, binary.BigEndian, in))

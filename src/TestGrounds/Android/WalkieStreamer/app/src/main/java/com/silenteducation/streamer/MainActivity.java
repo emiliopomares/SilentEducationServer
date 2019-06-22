@@ -148,7 +148,7 @@ public class MainActivity extends AppCompatActivity implements Runnable {
         //if (samplerateString == null) samplerateString = "48000";
         //if (buffersizeString == null) buffersizeString = "480";
         samplerate = 8000;//8000;//Integer.parseInt(samplerateString);
-        buffersize = 48;//96;//Integer.parseInt(buffersizeString);
+        buffersize = 12;//96;//Integer.parseInt(buffersizeString);
 
         System.loadLibrary("WalkieStreamer");             // load native library
         tempPath = getCacheDir().getAbsolutePath() + "/temp.wav";  // temporary file path

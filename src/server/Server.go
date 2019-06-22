@@ -10,8 +10,11 @@ import (
 	"io"
 	"strconv"
 	"fmt"
+	"os"
 	"net"
+	"unsafe"
 	"net/http"
+
 	//"crypto/sha256"
 	//"time"
 
@@ -21,7 +24,9 @@ import (
 
 const MulticastUDPPort string = "9191"
 const UnicastUDPPort string = "9190"
-const RESTPort string = "8000"
+const RESTPort string = "8080"
+const AudioWSPort = "9196"
+const TargetSampleRate = 8000
 var LocalIP string
 
 type DeviceInfo struct {
@@ -33,6 +38,10 @@ type DeviceInfo struct {
         Activation      string  `json:"activation"`
 }
 
+/////////////////////////////////////////////////////
+//    Commands                                     //
+/////////////////////////////////////////////////////
+
 type RenameInfo struct {
 	Id	string `json:"id"`
 	To	string `json:"to"`
@@ -41,6 +50,20 @@ type RenameInfo struct {
 type RenameCommand struct {
 	Rename		RenameInfo `json:"rename"`
 }
+
+type MessageInfo struct {
+        To      int    `json:"to"`
+        Msg     string `json:"msg"`
+	Color	string `json:"color"`
+}
+
+type MessageCommand struct {
+        Message          MessageInfo `json:"message"`
+}
+
+
+
+
 
 type DeviceTypeDeclr struct {
 	DeviceType	string	`json:"devicetype"`
@@ -159,6 +182,7 @@ func serveMulticastUDP(a string, h func(*net.UDPAddr, int, []byte)) {
 }
 
 func startServiceDiscovery() {
+	fmt.Println("  >> started service discovery")
 	go serveMulticastUDP(makeAddressFromIPandStrPort(MulticastAddr, MulticastUDPPort), msgHandler)
 }
 
@@ -207,22 +231,22 @@ func CheckPasswd(user string, pass string) bool {
 
 func AdminUserHandler(w http.ResponseWriter, pass string) {
 	if CheckPasswd("Admin", pass) {
-		ReplyWithInstancedFileTemplate(w, ControlPanelFile, []string{"<usertype>", "<serverip>", "<isadmin>"}, []string{"Administrador", LocalIP, "true"})
+		ReplyWithInstancedFileTemplate(w, ControlPanelFile, []string{"<usertype>", "<serverip>", "<port>", "<isadmin>"}, []string{"Administrador", "localhost", RESTPort, "true"})
 	} else {
-		ReplyWithInstancedFileTemplate(w, LoginAccessFile, []string{"<message>", "<serverip>"}, []string{"Datos de acceso incorrectos", LocalIP})
+		ReplyWithInstancedFileTemplate(w, LoginAccessFile, []string{"<message>", "<serverip>", "<port>"}, []string{"Datos de acceso incorrectos", "localhost", RESTPort})
 	}
 }
 
 func UserUserHandler(w http.ResponseWriter, pass string) {
 	if CheckPasswd("Admin", pass) {
-                ReplyWithInstancedFileTemplate(w, ControlPanelFile, []string{"<usertype>", "<serverip>", "<isadmin>"}, []string{"Profesor/a", LocalIP, "false"})
+                ReplyWithInstancedFileTemplate(w, ControlPanelFile, []string{"<usertype>", "<serverip>", "<port>", "<isadmin>"}, []string{"Profesor/a", "localhost", RESTPort, "false"})
         } else {
-                ReplyWithInstancedFileTemplate(w, LoginAccessFile, []string{"<message>", "<serverip>"}, []string{"Datos de acceso incorrectos", LocalIP})
+                ReplyWithInstancedFileTemplate(w, LoginAccessFile, []string{"<message>", "<serverip>", "<port>"}, []string{"Datos de acceso incorrectos", "localhost", RESTPort})
         }
 }
 
 func NonAuthorizedUserHandler(w http.ResponseWriter, pass string) {
-	ReplyWithInstancedFileTemplate(w, LoginAccessFile, []string{"<message>", "<serverip>"}, []string{"Datos de acceso incorrectos", LocalIP})
+	ReplyWithInstancedFileTemplate(w, LoginAccessFile, []string{"<message>", "<serverip>", "<port>"}, []string{"Datos de acceso incorrectos", "localhost", RESTPort})
 }
 
 func GetUserHandler(user string) func(http.ResponseWriter, string) {
@@ -246,15 +270,16 @@ func AttemptLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func LoginScreen(w http.ResponseWriter, r *http.Request) {
-	ReplyWithInstancedFileTemplate(w, LoginAccessFile, []string{"<message>", "<serverip>"}, []string{"", LocalIP})
+	ReplyWithInstancedFileTemplate(w, LoginAccessFile, []string{"<message>", "<serverip>", "<port>"}, []string{"", "localhost", RESTPort})
 }
-//ReplyWithInstancedFileTemplate(w, LoginAccessFile, []string{"<message>", "<serverip>"}, []string{"Datos de acceso incorrectos", LocalIP})
+//ReplyWithInstancedFileTemplate(w, LoginAccessFile, []string{"<message>", "<serverip>", "<port>"}, []string{"Datos de acceso incorrectos", LocalIP, RESTPort})
 
 func Healthcheck(w http.ResponseWriter, r *http.Request) {
 	JSONResponseFromString(w, "{\"alive\":true}")
 }
 
 func setupWebServer() {
+	fmt.Println("  >> web server setup")
         r := mux.NewRouter()
         r.HandleFunc("/", LoginScreen).Methods("GET")
         r.HandleFunc("/login", AttemptLogin).Methods("POST")
@@ -328,20 +353,60 @@ func wsProcessDeviceCommand(socket *websocket.Conn, cmd string) {
 
 func wsProcessBrowserCommand(socket *websocket.Conn, cmd string) {
 	var command RenameCommand
+	var message MessageCommand
+	fmt.Println("    >>> received command from browser: " + cmd)
 	err := json.Unmarshal([]byte(cmd), &command)
-	if err == nil {
-		fmt.Println("  >> rename command")
+	if (err == nil) && (command.Rename.Id != "") {
+		fmt.Println("         >> rename command")
 		index, exists := findInDeviceArray(command.Rename.Id)
 		if exists {
 			deviceConnections[index].WriteMessage(1, []byte(cmd))			
 		}
-	} else {
-		fmt.Println("  >> was not a rename command: " , cmd)
+	} 
+
+	err = json.Unmarshal([]byte(cmd), &message)
+	if (err == nil) && (message.Message.Msg != "") {
+		fmt.Println("          >> Message command")
+		deviceConnections[message.Message.To].WriteMessage(1, []byte(cmd))
+	}
+}
+
+func wsAudio(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("  >> wsAudio called")
+	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+    conn, err := upgrader.Upgrade(w, r, nil) // error ignored for sake of simplicity
+        if err != nil {
+        fmt.Println("This was the error: ", err)
+    }
+
+    for {
+		_, handshakemsg, err := conn.ReadMessage()
+		if err != nil {
+			return
+		}
+
+		// check if it is a command
+		if(len(handshakemsg) < 128) {
+			msg := string(handshakemsg)
+			if(msg == "start") {
+				fmt.Println("   >> audio recording start")
+				audioStartRecording()
+			} else if (msg == "end") {
+				fmt.Println("   >> audio recording end")
+				audioEndRecording()
+			}
+
+			} else {
+				// Assume it's data
+				audioStreamData(handshakemsg)
+			}
+	
+		//fmt.Println("Something this long received on the audio endpoint: " + strconv.Itoa(len(handshakemsg)))
 	}
 }
 
 func wsFunction(w http.ResponseWriter, r *http.Request) {
-		fmt.Println("wsFunction called")
+		
                 upgrader.CheckOrigin = func(r *http.Request) bool { return true }
                 conn, err := upgrader.Upgrade(w, r, nil) // error ignored for sake of simplicity
                 if err != nil {
@@ -353,6 +418,8 @@ func wsFunction(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		data := string(handshakemsg)
+		fmt.Println("wsFunction called: " + data)
 		if(string(handshakemsg) == "{\"devicetype\":\"device\"}") {
 			fmt.Println("A new device registered ", msgtype)
 			deviceConnections = append(deviceConnections, conn)
@@ -383,8 +450,136 @@ func wsFunction(w http.ResponseWriter, r *http.Request) {
 }
 
 func setupWebsocket() {
+	fmt.Println("  >> setupWebsocket")
 	http.HandleFunc("/", wsFunction)
+	http.HandleFunc("/audio/", wsAudio)
+
 	http.ListenAndServe(":8081", nil)
+}
+
+
+/////////////////////////////////////////////////////
+//    Audio                                        //
+/////////////////////////////////////////////////////
+
+var IncomingSampleRate = 44100
+
+func byteSliceAsFloat32Slice(arr []byte) []float32 {
+        lf := len(arr) / 4
+
+        // step by step
+        pf := &(arr[0])                        // To pointer to the first byte of b
+        up := unsafe.Pointer(pf)                  // To *special* unsafe.Pointer, it can be converted to any pointer
+        pi := (*[1]float32)(up)                      // To pointer as byte array
+        buf := (*pi)[:]                           // Creates slice to our array of 1 byte
+        address := unsafe.Pointer(&buf)           // Capture the address to the slice structure
+        lenAddr := uintptr(address) + uintptr(8)  // Capture the address where the length and cap size is stored
+        capAddr := uintptr(address) + uintptr(16) // WARNING: This is fragile, depending on a go-internal structure.
+        lenPtr := (*int)(unsafe.Pointer(lenAddr)) // Create pointers to the length and cap size
+        capPtr := (*int)(unsafe.Pointer(capAddr)) //
+        *lenPtr = lf                              // Assign the actual slice size and cap
+        *capPtr = lf                              //
+
+        return buf
+}
+
+func int16SliceAsByteSlice(arr []int16) []byte {
+        lf := 2 * len(arr)
+
+        // step by step
+        pf := &(arr[0])                        // To pointer to the first byte of b
+        up := unsafe.Pointer(pf)                  // To *special* unsafe.Pointer, it can be converted to any pointer
+        pi := (*[1]byte)(up)                      // To pointer as byte array
+        buf := (*pi)[:]                           // Creates slice to our array of 1 byte
+        address := unsafe.Pointer(&buf)           // Capture the address to the slice structure
+        lenAddr := uintptr(address) + uintptr(8)  // Capture the address where the length and cap size is stored
+        capAddr := uintptr(address) + uintptr(16) // WARNING: This is fragile, depending on a go-internal structure.
+        lenPtr := (*int)(unsafe.Pointer(lenAddr)) // Create pointers to the length and cap size
+        capPtr := (*int)(unsafe.Pointer(capAddr)) //
+        *lenPtr = lf                              // Assign the actual slice size and cap
+        *capPtr = lf                              //
+
+        return buf
+}
+
+var Float32AudioBuffer []float32
+var Float32AudioBufferOffset int
+var Int16AudioBufferOffset int
+var Int16AudioBuffer []int16
+
+const MaxSamplesInBuffer = 2000000
+
+func initAudio() {
+	Float32AudioBuffer = make([]float32, MaxSamplesInBuffer)
+	Int16AudioBuffer = make([]int16, MaxSamplesInBuffer)
+	Float32AudioBufferOffset = 0
+	Int16AudioBufferOffset = 0
+}
+
+func audioStartRecording() {
+	Float32AudioBufferOffset = 0
+	Int16AudioBufferOffset = 0
+}
+
+func audioEndRecording() {
+	resampledBuffer := resampleFloat32Stream(Float32AudioBuffer[:Float32AudioBufferOffset], 44100, 8000)
+	Float32toInt16(resampledBuffer, Int16AudioBuffer, len(resampledBuffer))
+	bytes := int16SliceAsByteSlice(Int16AudioBuffer[:len(resampledBuffer)])
+	// write bytes to file!!
+	file, err := os.Create("audio.raw")
+    if err != nil {
+        log.Fatal(err)
+    }
+    file.Write(bytes)
+    file.Close()
+    fmt.Println("    >> audio.raw written (in theory)")
+}
+
+func audioStreamData(frame []byte) {
+	floats := byteSliceAsFloat32Slice(frame)
+	_ = copy(Float32AudioBuffer[Float32AudioBufferOffset:], floats)
+	Float32AudioBufferOffset = Float32AudioBufferOffset + len(floats)
+}
+
+func sampleAverage(inData []float32) float32 {
+	result := float32(0.0)
+	for i:=0 ; i < len(inData) ; i++ {
+		result += inData[i]
+	}
+	return result/float32(len(inData))
+}
+
+func resampleFloat32Stream(inData []float32, inSampleRate int, outSampleRate int) []float32 {
+	var result []float32
+	skipValues := float32(inSampleRate)/float32(outSampleRate)
+	sampleWindowStart := float32(0)
+	sampleWindowEnd := float32(0)
+	if skipValues < float32(1.0) {
+		return nil
+	}
+	
+	outSamples := int(float32(len(inData))/skipValues)
+	result = make([]float32, outSamples)
+	
+	for i:=0; i < outSamples; i++ {
+		sampleWindowEnd += skipValues
+		start := int(sampleWindowStart)
+		end := int(sampleWindowEnd)
+		result[i] = sampleAverage(inData[start:end])
+		sampleWindowStart += skipValues
+	}
+
+	return result
+}
+
+func Float32toInt16(inData []float32, outData []int16, length int) {
+	MaxValue := float32(32767.0)
+	for i := 0 ; i < length; i++ {
+
+		sample := int16(inData[i] * MaxValue)
+		outData[i] = sample
+
+	}
 }
 
 
@@ -393,9 +588,11 @@ func setupWebsocket() {
 /////////////////////////////////////////////////////
 
 func main() {
-        LocalIP = GetLocalIP()
-        fmt.Println("Silent Education Server started on IPv4: " + LocalIP)
-	fmt.Println("Panel de control ->  http://127.0.0.1:8080/")
+ 
+    LocalIP = GetLocalIP()
+    fmt.Println("Silent Education Server started on IPv4: " + LocalIP)
+	fmt.Println("Panel de control ->  http://127.0.0.1:" + RESTPort)
+	initAudio()
 	startServiceDiscovery()
 	go setupWebServer()
 	setupWebsocket()

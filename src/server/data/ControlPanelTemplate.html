@@ -21,7 +21,11 @@ body {
 <br><br><br>
 <button style="align-self: right" onclick="selectAllDevices()">Todos</button> <button style="align-self: right" onclick="selectNoDevices()">Ninguno</button>
 <br><br>
-Mensaje: <input type=\"textfield\"><button>Enviar</button><button onmousedown="startAudioBroadcast()" onmouseup="stopAudioBroadcast()"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAPCAMAAADarb8dAAAAdVBMVEUAAADsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgCMHCccAAAAJnRSTlMAo0764M3BupFxYEQcBNmyraidjn1ta2c4MyPv7cWEdmNcUUc/Fhnu3e0AAAB9SURBVAjXdc5HDsMwDATAtdWbe09v/P8TY+lgQEAyAA+75IH4z5uQ5ZLxLDcXJoFpjqtxnGZxNdSiPr8AVNYa0oGo0AWibh8SJyJZ+mUD0AIfiopHrSyAeJcK+UYihqFPRddzH4vNObfqvWhwY/fjj4WTAtYSOKgKufDET18IZwhZzMvL4wAAAABJRU5ErkJggg=="></button>
+Mensaje: <input type=\"textfield\" id="message"><br>
+<input type="radio" name="color" value="red" checked><font size=2 color='red'>Rojo</font>
+<input type="radio" name="color" value="orange"><font size=2 color='orange'>Naranja</font>
+<input type="radio" name="color" value="green"><font size=2 color='green'>Verde</font><br><div><button style="height:30px" onClick="broadcastMessage()">Enviar</button>
+	<button style="height:30px;position:relative;top:3px" onmousedown="startAudioBroadcast()" onmouseup="stopAudioBroadcast()"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAPCAMAAADarb8dAAAAdVBMVEUAAADsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgCMHCccAAAAJnRSTlMAo0764M3BupFxYEQcBNmyraidjn1ta2c4MyPv7cWEdmNcUUc/Fhnu3e0AAAB9SURBVAjXdc5HDsMwDATAtdWbe09v/P8TY+lgQEAyAA+75IH4z5uQ5ZLxLDcXJoFpjqtxnGZxNdSiPr8AVNYa0oGo0AWibh8SJyJZ+mUD0AIfiopHrSyAeJcK+UYihqFPRddzH4vNObfqvWhwY/fjj4WTAtYSOKgKufDET18IZwhZzMvL4wAAAABJRU5ErkJggg=="></button></div>
 
 <div id="DeviceArray">
 <table>
@@ -49,10 +53,12 @@ Mensaje: <input type=\"textfield\"><button>Enviar</button><button onmousedown="s
 <script>
 	
 let socket = new WebSocket("ws://<serverip>:8081/");
+let audioSocket = new WebSocket("ws://<serverip>:8081/audio/");
 
 socket.onopen = function(e) {
   //alert("[open] Connection established, send -> server");
   socket.send(JSON.stringify({devicetype:"web"}))
+
 };
 
 socket.onmessage = function(event) {
@@ -74,6 +80,22 @@ socket.onerror = function(error) {
   alert("socker.onerror" + `[error] ${error.message}`);
 };
 
+audioSocket.onopen = function(e) {
+  
+};
+
+audioSocket.onmessage = function(event) {
+  
+};
+
+audioSocket.onclose = function(event) {
+  
+};
+
+audioSocket.onerror = function(error) {
+  alert("audiosocker.onerror" + `[error] ${error.message}`);
+};
+
 </script>
 
 
@@ -86,6 +108,15 @@ socket.onerror = function(error) {
 const NColumns = 3
 
 const IsAdmin = <isadmin>
+
+var audioBroadcastState = {
+
+	state: 'stopped',
+	initialized: false,
+	sampleRate: 44100,
+	target: ''
+
+}
 
 function GetColorFromName(name) {
 
@@ -103,7 +134,7 @@ function DrawDevicesArray(deviceList) {
 		if(i>0 && i%NColumns==0) newContent += "</tr>\n"
 		newContent += "<td>"
 		newContent += "<table><tr><td bgcolor=\""+GetColorFromName(deviceList[i].activation)+"\"><input type=\"checkbox\" id=\"checkbox"+i+"\"><div id='nameofdevice"+i+"' contenteditable='"+IsAdmin+"'>" + deviceList[i].name + "</div></td></tr>"
-		newContent += "<tr><td>Mensaje: <input type=\"textfield\"><button>Enviar</button><button onmousedown=\"startAudioUnicast("+i+")\" onmouseup=\"stopAudioUnicast("+i+")\"><img src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAPCAMAAADarb8dAAAAdVBMVEUAAADsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgCMHCccAAAAJnRSTlMAo0764M3BupFxYEQcBNmyraidjn1ta2c4MyPv7cWEdmNcUUc/Fhnu3e0AAAB9SURBVAjXdc5HDsMwDATAtdWbe09v/P8TY+lgQEAyAA+75IH4z5uQ5ZLxLDcXJoFpjqtxnGZxNdSiPr8AVNYa0oGo0AWibh8SJyJZ+mUD0AIfiopHrSyAeJcK+UYihqFPRddzH4vNObfqvWhwY/fjj4WTAtYSOKgKufDET18IZwhZzMvL4wAAAABJRU5ErkJggg=='></button></td></table>"
+		newContent += "<tr><td align='center'>Mensaje: <input type=\"textfield\" id=\"message"+i+"\"><br><input type=\"radio\" name=\"color"+i+"\" value=\"red\" checked><font size=2 color='red'>Rojo</font><input type=\"radio\" name=\"color"+i+"\" value=\"orange\"><font size=2 color='orange'>Naranja</font><input type=\"radio\" name=\"color"+i+"\" value=\"green\"><font size=2 color='green'>Verde</font><br><div><button style='height:30px' onClick=\"sendMessageTo("+i+")\">Enviar</button>\n<button style='height:30px;position:relative;top:3px' onmousedown=\"startAudioUnicast("+i+")\" onmouseup=\"stopAudioUnicast("+i+")\"><img src='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAPCAMAAADarb8dAAAAdVBMVEUAAADsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgCMHCccAAAAJnRSTlMAo0764M3BupFxYEQcBNmyraidjn1ta2c4MyPv7cWEdmNcUUc/Fhnu3e0AAAB9SURBVAjXdc5HDsMwDATAtdWbe09v/P8TY+lgQEAyAA+75IH4z5uQ5ZLxLDcXJoFpjqtxnGZxNdSiPr8AVNYa0oGo0AWibh8SJyJZ+mUD0AIfiopHrSyAeJcK+UYihqFPRddzH4vNObfqvWhwY/fjj4WTAtYSOKgKufDET18IZwhZzMvL4wAAAABJRU5ErkJggg=='></button></div></td></table>"
 		newContent += "</td>"
 		if(i>0 && i%NColumns==0) newContent += "<tr>\n"
 	}
@@ -133,7 +164,7 @@ function RenameDevice(id, newname) {
 }
 
 function selectAllDevices() {
-	alert('a' + devices.length)
+	//alert('a' + devices.length)
 	for(var i = 0; i < devices.length; ++i) {
 		document.getElementById("checkbox"+i).checked = true;
 	}
@@ -169,15 +200,82 @@ DrawDevicesArray(devices)
 
 function logout() {
 	socket.close();
-	window.location.replace("http://<serverip>:8080/");
+	window.location.replace("http://<serverip>:<port>/");
+}
+
+function broadcastMessage() {
+	var msg = document.getElementById("message").value
+	var targets = 0
+	for(var i = 0; i < devices.length; ++i) {
+		if (document.getElementById("checkbox"+i).checked == true) {
+			++targets
+			var radios = document.getElementsByName('color');
+			var color='red'
+			if(radios[1].checked) {
+				color='orange'
+			}
+			if(radios[2].checked) {
+				color='green'
+			}
+			command = JSON.stringify({message:{to:i,msg:msg,color:color}})
+			socket.send(command)
+		}
+	}
+	if(targets == 0) {
+		alert("Advertencia: ningún dispositivo seleccionado")
+	}
+	else {
+		document.getElementById("message").value = ""
+	}
+}
+
+function sendMessageTo(index) {
+	var msg = document.getElementById("message"+index).value
+	var radios = document.getElementsByName("color"+index)
+	var color="red"
+	if(radios[1].checked) {
+		color='orange'
+	}
+	if(radios[2].checked) {
+		color='green'
+	}
+	command = JSON.stringify({message:{to:index,msg:msg,color:color}})
+	socket.send(command)
+	document.getElementById("message"+index).value = ""
 }
 
 function startAudioBroadcast() {
-	//alert("Start audio broadcast")
+	audioSocket.send("start");
+	audioBroadcastState.state = 'playing'
+	if(audioBroadcastState.initialized == false) {
+		navigator.mediaDevices.getUserMedia({audio:true, video:false}).then( (stream) => {
+			//console.log("Stream: ")
+			//console.dir(stream.getAudioTracks())
+			var context = new AudioContext();
+    		var source = context.createMediaStreamSource(stream);
+    		var processor = context.createScriptProcessor(1024, 1, 1);
+
+    		source.connect(processor);
+    		processor.connect(context.destination);
+
+    		processor.onaudioprocess = function(e) {
+     		 // Do something with the data, i.e Convert this to WAV
+     		 	if(audioBroadcastState.state == 'playing') {
+      				//console.dir(e.inputBuffer);
+      				//console.log("audioSocket: " + audioSocket)
+      				//console.log("Sending out!");
+      				audioSocket.send(e.inputBuffer.getChannelData(0));
+      			}
+    		};
+		})
+	}
+	audioBroadcastState.initialized = true
+
 }
 
 function stopAudioBroadcast() {
-	alert("Stop audio broadcast")	
+	audioBroadcastState.state = 'stopped'
+	audioSocket.send("end");
 }
 
 function startAudioUnicast(device) {

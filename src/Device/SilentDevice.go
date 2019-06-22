@@ -83,7 +83,15 @@ type RenameCommand struct {
         Rename          RenameInfo `json:"rename"`
 }
 
+type MessageInfo struct {
+        To      int    `json:"to"`
+        Msg     string `json:"msg"`
+        Color   string `json:"color"`
+}
 
+type MessageCommand struct {
+        Message          MessageInfo `json:"message"`
+}
 
 /////////////////////////////////////////////////////
 //    Configuration                                //
@@ -256,11 +264,19 @@ var socket gowebsocket.Socket
 func wsProcessMessage(socket gowebsocket.Socket, command string) {
 	var rencomm RenameCommand
 	err := json.Unmarshal([]byte(command), &rencomm)
-	if err == nil {
+	if (err == nil) && (rencomm.Rename.To != "") {
 		deviceInfo.Name = rencomm.Rename.To
 		fmt.Println("    >>> Setting device name to " + deviceInfo.Name)
 		SaveDeviceConfigToFile()
 	}
+
+
+	var msgcomm MessageCommand
+	err = json.Unmarshal([]byte(command), &msgcomm)
+	if (err == nil) && (msgcomm.Message.Msg != "") {
+		fmt.Println("   ########################## MESSAGE: " + msgcomm.Message.Msg + " in " + msgcomm.Message.Color + " ############################")
+	}
+
 }
 
 func ConnectWS(ip string, port string) {

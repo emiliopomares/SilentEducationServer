@@ -8,6 +8,7 @@
 
 import React, {Component} from 'react';
 import {Platform, StyleSheet, Text, View} from 'react-native';
+import MicStream from 'react-native-microphone-stream';
 
 const instructions = Platform.select({
   ios: 'Press Cmd+R to reload,\n' + 'Cmd+D or shake for dev menu',
@@ -18,6 +19,27 @@ const instructions = Platform.select({
 
 type Props = {};
 export default class App extends Component<Props> {
+
+  componentDidMount() {
+
+
+        var initResult = MicStream.init({
+  		bufferSize: 4096,
+  		sampleRate: 44100,
+  		bitsPerChannel: 16,
+  		channelsPerFrame: 1,
+	});
+	console.log("MicStream init: " + initResult)
+	setTimeout( () => {
+			const listener = MicStream.addListener(data => console.log(data));
+		}, 1000)
+	setTimeout( () => {
+			MicStream.start();
+		}, 2000)
+
+
+  }
+
   render() {
     return (
       <View style={styles.container}>

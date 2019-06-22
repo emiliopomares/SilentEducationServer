@@ -53,7 +53,7 @@ Mensaje: <input type=\"textfield\" id="message"><br>
 <script>
 	
 let socket = new WebSocket("ws://<serverip>:8081/");
-let audioSocket = new WebSocket("ws://<serverip>:8081/audio/");
+let audioSocket = new WebSocket("ws://<serverip>:8081/audioFromWeb/");
 
 socket.onopen = function(e) {
   //alert("[open] Connection established, send -> server");

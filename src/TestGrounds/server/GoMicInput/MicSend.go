@@ -10,7 +10,7 @@ import (
 	"unsafe"
 )
 
-const UnicastUDPPort string = "9190"
+const UnicastUDPPort string = "9193"
 
 const bufferSize = 16
 
@@ -57,7 +57,7 @@ func main() {
 	defer portaudio.Terminate()
 	in := make([]int16, bufferSize)
 	inBytes := int16SliceAsByteSlice(in)
-	stream, err := portaudio.OpenDefaultStream(1, 0, 8000, len(in), in)
+	stream, err := portaudio.OpenDefaultStream(1, 0, 44100, len(in), in)
 	chk(err)
 	defer stream.Close()
 

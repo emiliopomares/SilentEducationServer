@@ -10,9 +10,9 @@ import (
 	"io"
 	"strconv"
 	"fmt"
-	"os"
 	"net"
 	"unsafe"
+	//"os"
 	"net/http"
 
 	//"crypto/sha256"
@@ -293,8 +293,9 @@ func setupWebServer() {
 //    Websockets                                   //
 /////////////////////////////////////////////////////
 
-var devices	       []*DeviceInfo
+var devices	       	   []*DeviceInfo
 var deviceConnections  []*websocket.Conn
+var deviceAudioConnections  []*websocket.Conn
 var webConnections     []*websocket.Conn
 
 func wsBroadcastToBrowsers(cmd string) {
@@ -371,8 +372,29 @@ func wsProcessBrowserCommand(socket *websocket.Conn, cmd string) {
 	}
 }
 
-func wsAudio(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("  >> wsAudio called")
+// this handler sends audio to the device websocket
+func wsAudioToDevice(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("                             >>>>>>>>>>>>>>>>>>>>>>>>>>>>>> wsAudioToDevice called <<<<<<<<<<<<<<<<<<<<<")
+	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+    conn, err := upgrader.Upgrade(w, r, nil) // error ignored for sake of simplicity
+        if err != nil {
+        fmt.Println("This was the error: ", err)
+    }
+
+	deviceAudioConnections = append(deviceAudioConnections, conn)
+
+	fmt.Println("   >> device connected its audio websocket")
+
+	_, _, err = conn.ReadMessage()
+		if err != nil {
+			return
+		}
+    
+}
+
+// this handler takes audio coming from the web interface
+func wsAudioFromWeb(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("  >> wsAudioFromWeb called")
 	upgrader.CheckOrigin = func(r *http.Request) bool { return true }
     conn, err := upgrader.Upgrade(w, r, nil) // error ignored for sake of simplicity
         if err != nil {
@@ -405,13 +427,14 @@ func wsAudio(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// maybe split this in two: device and web version, just to keep things more tidy
 func wsFunction(w http.ResponseWriter, r *http.Request) {
 		
-                upgrader.CheckOrigin = func(r *http.Request) bool { return true }
-                conn, err := upgrader.Upgrade(w, r, nil) // error ignored for sake of simplicity
-                if err != nil {
-                        fmt.Println("This was the error: ", err)
-                }
+        upgrader.CheckOrigin = func(r *http.Request) bool { return true }
+        conn, err := upgrader.Upgrade(w, r, nil) // error ignored for sake of simplicity
+        if err != nil {
+            fmt.Println("This was the error: ", err)
+        }
 
 		msgtype, handshakemsg, err := conn.ReadMessage()
 		if err != nil {
@@ -451,8 +474,9 @@ func wsFunction(w http.ResponseWriter, r *http.Request) {
 
 func setupWebsocket() {
 	fmt.Println("  >> setupWebsocket")
-	http.HandleFunc("/", wsFunction)
-	http.HandleFunc("/audio/", wsAudio)
+	http.HandleFunc("/", wsFunction) // maybe split this in two: device and web version, just to keep things more tidy
+	http.HandleFunc("/audioFromWeb/", wsAudioFromWeb)
+	http.HandleFunc("/audioToDevice/", wsAudioToDevice)
 
 	http.ListenAndServe(":8081", nil)
 }
@@ -546,14 +570,26 @@ func audioEndRecording() {
 	bytes := int16SliceAsByteSlice(Int16AudioBuffer[:Float32AudioBufferOffset])
 	//bytes := float32SliceAsByteSlice(Float32AudioBuffer[:Float32AudioBufferOffset])
 
-	// write bytes to file!!
-	file, err := os.Create("audio.raw")
-    if err != nil {
-        log.Fatal(err)
-    }
-    file.Write(bytes)
-    file.Close()
-    fmt.Println("    >> audio.raw written (in theory)")
+	//// write bytes to file!!
+	//file, err := os.Create("audio.raw")
+    //if err != nil {
+    //    log.Fatal(err)
+   // }
+    //file.Write(bytes)
+    //file.Close()
+    //fmt.Println("    >> audio.raw written (in theory)")
+
+	// send to all
+	
+    for i := 0 ; i < len(deviceAudioConnections) ; i++ {
+    	blockSize := 1024 // @TODO must make sure to add padding if needed
+    	_ = deviceAudioConnections[i].WriteMessage(1, []byte("start"))
+    	for j := 0 ; j < Float32AudioBufferOffset/blockSize; j++ {
+    		_ = deviceAudioConnections[i].WriteMessage(1, bytes[j*2*blockSize:(j+1)*2*blockSize])
+    	}
+    	_ = deviceAudioConnections[i].WriteMessage(1, []byte("end"))
+	}	
+
 }
 
 func audioStreamData(frame []byte) {

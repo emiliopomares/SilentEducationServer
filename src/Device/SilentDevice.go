@@ -20,6 +20,7 @@ import (
 	"net"
 	"strconv"
 	"time"
+	"unsafe"
 
 	"github.com/gorilla/mux"
 	"github.com/sacOO7/gowebsocket"
@@ -262,6 +263,7 @@ func CheckPairing(w http.ResponseWriter, r *http.Request) {
 /////////////////////////////////////////////////////
 
 var socket gowebsocket.Socket 
+var audioSocket gowebsocket.Socket 
 
 func wsProcessMessage(socket gowebsocket.Socket, command string) {
 	var rencomm RenameCommand
@@ -318,6 +320,68 @@ func ConnectWS(ip string, port string) {
 	}
   
 	socket.Connect()
+}
+
+func ConnectAudioWS(ip string, port string) {
+	audioSocket = gowebsocket.New("ws://" + ip + ":" + port + "/audioToDevice/")
+	
+	audioSocket.OnConnectError = func(err error, socket gowebsocket.Socket) {
+		fmt.Println("Received connect error - ", err)
+	}
+  
+	audioSocket.OnConnected = func(socket gowebsocket.Socket) {
+		fmt.Println("        >>>>>>   ws  Connected to server");
+	}
+
+	audioSocket.OnTextMessage = func(msg string, socket gowebsocket.Socket) {
+		//fmt.Println("Audio socket Received Text Message length ", len([]byte(msg)))
+		// check if it is a command
+		if(len(msg) < 128) {
+			//msg := string(data)
+			if(msg == "start") {
+				audioStartRecording()
+			} else if (msg == "end") {
+				audioEndRecording()
+			}
+
+		} else {
+			audioStreamData([]byte(msg))
+		}
+	}
+  
+	audioSocket.OnBinaryMessage = func(data []byte, socket gowebsocket.Socket) {
+		fmt.Println("Audio socket Received Binary Message Length ", len(data))
+		// check if it is a command
+		if(len(data) < 128) {
+			msg := string(data)
+			if(msg == "start") {
+				audioStartRecording()
+			} else if (msg == "end") {
+				audioEndRecording()
+			}
+
+			} else {
+				audioStreamData(data)
+			}
+
+	}
+  
+	audioSocket.OnPingReceived = func(data string, socket gowebsocket.Socket) {
+		log.Println("Received ping - " + data)
+	}
+  
+    audioSocket.OnPongReceived = func(data string, socket gowebsocket.Socket) {
+		log.Println("Received pong - " + data)
+	}
+
+	audioSocket.OnDisconnected = func(err error, socket gowebsocket.Socket) {
+		fmt.Println("Disconnected from server !!! ")
+		time.Sleep(5 * time.Second)
+		relaunchServerDiscovery()
+		return
+	}
+  
+	audioSocket.Connect()
 }
 
 func SendTextWS(msg string) {
@@ -478,6 +542,7 @@ func discoverServerIP() {
 
 func SendHandshakeToServer() {
 	ConnectWS(serverInfo.ServerIP, "8081")
+	ConnectAudioWS(serverInfo.ServerIP, "8081")
 	SendTextWS("{\"devicetype\":\"device\"}")
 	bytes, _ := json.Marshal(deviceInfo)
 	SendTextWS(string(bytes))
@@ -620,7 +685,8 @@ func initializeDevice() {
 	serverIPknown = false
 	LoadDeviceConfigFromFile()
 	ping = CreatePingAvailable()
-	StartAudio()
+	initAudio()
+	go StartAudio()
 	go listenUnicastUDP()
 	go listenMulticastUDP()
 	go discoverServerIP()
@@ -703,7 +769,7 @@ func StartAudio() {
 
 func addData(conn *net.UDPConn) {
 
-	var maxShortVal int16 = 0
+	//var maxShortVal int16 = 0
 	var buf [2048]byte
 	n, err := conn.Read(buf[0:])
 	fmt.Printf("%d bytes received\n", n)
@@ -716,19 +782,8 @@ func addData(conn *net.UDPConn) {
 		return
 	} else {
 	
-		if availableFrames < nBanks {
-			for i := 0 ; i < bufferSize * numberOfChannels; i++ {
-				shortval := int16(buf[i*2]) + int16(buf[i*2+1]) << 8
-				if(shortval > maxShortVal) { maxShortVal = shortval }
-				if(shortval > max) { max = shortval }
-				if(shortval < min) { min = shortval }
-				buffer[i+bufferSize*numberOfChannels*(writeBank)] = shortval
-			}
-			availableFrames++
-			writeBank = (writeBank + 1) % nBanks
-		} else {
-			fmt.Println("Warning: buffer full")
-		}
+		AppendFrameToSoundBuffer(buf[:n])
+		
 	}
 	
 	receivedBytes = receivedBytes + n
@@ -739,8 +794,128 @@ func addData(conn *net.UDPConn) {
 
 }
 
+func AppendFrameToSoundBuffer(buf []byte) {
+	if availableFrames < nBanks {
+		for i := 0 ; i < bufferSize * numberOfChannels; i++ {
+			shortval := int16(buf[i*2]) + int16(buf[i*2+1]) << 8
+			buffer[i+bufferSize*numberOfChannels*(writeBank)] = shortval
+		}
+		availableFrames++
+		writeBank = (writeBank + 1) % nBanks
+	} else {
+		fmt.Println("Warning: buffer full")
+	}
+
+}
 
 
+func byteSliceAsFloat32Slice(arr []byte) []float32 {
+        lf := len(arr) / 4
+
+        // step by step
+        pf := &(arr[0])                        // To pointer to the first byte of b
+        up := unsafe.Pointer(pf)                  // To *special* unsafe.Pointer, it can be converted to any pointer
+        pi := (*[1]float32)(up)                      // To pointer as byte array
+        buf := (*pi)[:]                           // Creates slice to our array of 1 byte
+        address := unsafe.Pointer(&buf)           // Capture the address to the slice structure
+        lenAddr := uintptr(address) + uintptr(8)  // Capture the address where the length and cap size is stored
+        capAddr := uintptr(address) + uintptr(16) // WARNING: This is fragile, depending on a go-internal structure.
+        lenPtr := (*int)(unsafe.Pointer(lenAddr)) // Create pointers to the length and cap size
+        capPtr := (*int)(unsafe.Pointer(capAddr)) //
+        *lenPtr = lf                              // Assign the actual slice size and cap
+        *capPtr = lf                              //
+
+        return buf
+}
+
+func int16SliceAsByteSlice(arr []int16) []byte {
+        lf := 2 * len(arr)
+
+        // step by step
+        pf := &(arr[0])                        // To pointer to the first byte of b
+        up := unsafe.Pointer(pf)                  // To *special* unsafe.Pointer, it can be converted to any pointer
+        pi := (*[1]byte)(up)                      // To pointer as byte array
+        buf := (*pi)[:]                           // Creates slice to our array of 1 byte
+        address := unsafe.Pointer(&buf)           // Capture the address to the slice structure
+        lenAddr := uintptr(address) + uintptr(8)  // Capture the address where the length and cap size is stored
+        capAddr := uintptr(address) + uintptr(16) // WARNING: This is fragile, depending on a go-internal structure.
+        lenPtr := (*int)(unsafe.Pointer(lenAddr)) // Create pointers to the length and cap size
+        capPtr := (*int)(unsafe.Pointer(capAddr)) //
+        *lenPtr = lf                              // Assign the actual slice size and cap
+        *capPtr = lf                              //
+
+        return buf
+}
+
+func float32SliceAsByteSlice(arr []float32) []byte {
+        lf := 4 * len(arr)
+
+        // step by step
+        pf := &(arr[0])                        // To pointer to the first byte of b
+        up := unsafe.Pointer(pf)                  // To *special* unsafe.Pointer, it can be converted to any pointer
+        pi := (*[1]byte)(up)                      // To pointer as byte array
+        buf := (*pi)[:]                           // Creates slice to our array of 1 byte
+        address := unsafe.Pointer(&buf)           // Capture the address to the slice structure
+        lenAddr := uintptr(address) + uintptr(8)  // Capture the address where the length and cap size is stored
+        capAddr := uintptr(address) + uintptr(16) // WARNING: This is fragile, depending on a go-internal structure.
+        lenPtr := (*int)(unsafe.Pointer(lenAddr)) // Create pointers to the length and cap size
+        capPtr := (*int)(unsafe.Pointer(capAddr)) //
+        *lenPtr = lf                              // Assign the actual slice size and cap
+        *capPtr = lf                              //
+
+        return buf
+}
+
+func Float32toInt16(inData []float32, outData []int16, length int) {
+	MaxValue := float32(32767.0)
+	for i := 0 ; i < length; i++ {
+
+		sample := int16(inData[i] * MaxValue)
+		outData[i] = sample
+
+	}
+}
+
+var ByteAudioBuffer []byte
+var ByteAudioBufferOffset int
+var SamplesAudioBufferOffset int
+
+const MaxSamplesInBuffer = 2000000
+
+func initAudio() {
+	ByteAudioBuffer = make([]byte, MaxSamplesInBuffer*2)
+	ByteAudioBufferOffset = 0
+	SamplesAudioBufferOffset = 0
+}
+
+func audioStartRecording() {
+	ByteAudioBufferOffset = 0
+	SamplesAudioBufferOffset = 0
+}
+
+func DumpAudioToAudioBuffer(data []byte) {
+	numberOfFrames := (len(data)/2)/bufferSize
+	bufSizeFloat32 := float32(bufferSize)
+	sampleRateFloat32 := float32(44100.0)
+	fractionOfSecond := bufSizeFloat32/sampleRateFloat32
+	mus := fractionOfSecond*float32(499900.0)
+	musToWait := time.Duration(mus) //time.Duration(((float32(bufferSize))/(float32(44100.0)))*float32(990.0))
+	for i:=0 ; i<numberOfFrames ; i++ {
+		AppendFrameToSoundBuffer(data[i*2*bufferSize:(i+1)*2*bufferSize])
+		time.Sleep (musToWait * time.Microsecond)
+	}
+}
+
+func audioEndRecording() {
+	bytes := ByteAudioBuffer[:ByteAudioBufferOffset]
+	go DumpAudioToAudioBuffer(bytes)
+}
+
+func audioStreamData(frame []byte) {
+	_ = copy(ByteAudioBuffer[ByteAudioBufferOffset:], frame)
+	ByteAudioBufferOffset = ByteAudioBufferOffset + len(frame)
+	SamplesAudioBufferOffset = SamplesAudioBufferOffset + len(frame)/2
+}
 
 
 /////////////////////////////////////////////////////

@@ -26,7 +26,7 @@ const MulticastUDPPort string = "9191"
 const UnicastUDPPort string = "9190"
 const RESTPort string = "8080"
 const AudioWSPort = "9196"
-const TargetSampleRate = 8000
+const TargetSampleRate = 44100
 var LocalIP string
 
 type DeviceInfo struct {
@@ -502,6 +502,25 @@ func int16SliceAsByteSlice(arr []int16) []byte {
         return buf
 }
 
+func float32SliceAsByteSlice(arr []float32) []byte {
+        lf := 4 * len(arr)
+
+        // step by step
+        pf := &(arr[0])                        // To pointer to the first byte of b
+        up := unsafe.Pointer(pf)                  // To *special* unsafe.Pointer, it can be converted to any pointer
+        pi := (*[1]byte)(up)                      // To pointer as byte array
+        buf := (*pi)[:]                           // Creates slice to our array of 1 byte
+        address := unsafe.Pointer(&buf)           // Capture the address to the slice structure
+        lenAddr := uintptr(address) + uintptr(8)  // Capture the address where the length and cap size is stored
+        capAddr := uintptr(address) + uintptr(16) // WARNING: This is fragile, depending on a go-internal structure.
+        lenPtr := (*int)(unsafe.Pointer(lenAddr)) // Create pointers to the length and cap size
+        capPtr := (*int)(unsafe.Pointer(capAddr)) //
+        *lenPtr = lf                              // Assign the actual slice size and cap
+        *capPtr = lf                              //
+
+        return buf
+}
+
 var Float32AudioBuffer []float32
 var Float32AudioBufferOffset int
 var Int16AudioBufferOffset int
@@ -522,9 +541,11 @@ func audioStartRecording() {
 }
 
 func audioEndRecording() {
-	resampledBuffer := resampleFloat32Stream(Float32AudioBuffer[:Float32AudioBufferOffset], 44100, 8000)
-	Float32toInt16(resampledBuffer, Int16AudioBuffer, len(resampledBuffer))
-	bytes := int16SliceAsByteSlice(Int16AudioBuffer[:len(resampledBuffer)])
+	//////resampledBuffer := resampleFloat32Stream(Float32AudioBuffer[:Float32AudioBufferOffset], 44100, 8000)
+	Float32toInt16(Float32AudioBuffer[:Float32AudioBufferOffset], Int16AudioBuffer, Float32AudioBufferOffset)
+	bytes := int16SliceAsByteSlice(Int16AudioBuffer[:Float32AudioBufferOffset])
+	//bytes := float32SliceAsByteSlice(Float32AudioBuffer[:Float32AudioBufferOffset])
+
 	// write bytes to file!!
 	file, err := os.Create("audio.raw")
     if err != nil {

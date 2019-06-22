@@ -12,8 +12,6 @@ import (
 	"encoding/json"
 	"math/rand"
 	"sync"
-	"github.com/gorilla/mux"
-	"github.com/sacOO7/gowebsocket"
 	"log"
 	"net/http"
 	"io"
@@ -22,6 +20,10 @@ import (
 	"net"
 	"strconv"
 	"time"
+
+	"github.com/gorilla/mux"
+	"github.com/sacOO7/gowebsocket"
+	"github.com/gordonklaus/portaudio"
 )
 
 const MulticastUDPPort string = "9191"
@@ -279,15 +281,20 @@ func wsProcessMessage(socket gowebsocket.Socket, command string) {
 
 }
 
+func relaunchServerDiscovery() {
+	serverIPknown = false
+	go discoverServerIP()
+}
+
 func ConnectWS(ip string, port string) {
 	socket = gowebsocket.New("ws://" + ip + ":" + port + "/")
 	
 	socket.OnConnectError = func(err error, socket gowebsocket.Socket) {
-		log.Fatal("Received connect error - ", err)
+		fmt.Println("Received connect error - ", err)
 	}
   
 	socket.OnConnected = func(socket gowebsocket.Socket) {
-		log.Println("Connected to server");
+		fmt.Println("        >>>>>>   ws  Connected to server");
 	}
   
 	socket.OnTextMessage = func(message string, socket gowebsocket.Socket) {
@@ -304,7 +311,9 @@ func ConnectWS(ip string, port string) {
 	}
 
 	socket.OnDisconnected = func(err error, socket gowebsocket.Socket) {
-		log.Println("Disconnected from server ")
+		fmt.Println("Disconnected from server !!! ")
+		time.Sleep(5 * time.Second)
+		relaunchServerDiscovery()
 		return
 	}
   
@@ -486,14 +495,14 @@ func unicastMsgHandler(src *net.UDPAddr, n int, b []byte) {
                 fmt.Println("Server IP is set to " + serverIP)
                 SendHandshakeToServer()
 		success = true
-	} 
-	fmt.Println("    >>>> ... was not server info")	
-	var NewPingInfo PingInfo
-	err = json.Unmarshal(b[:n], &NewPingInfo)
-	if err == nil {
-		fmt.Println("      >>>>     unicastMsgHandler: received ping!")
-		ProcessPing(NewPingInfo.Ping, src.IP.String())
-		success = true
+	} else { 
+		var NewPingInfo PingInfo
+		err = json.Unmarshal(b[:n], &NewPingInfo)
+		if err == nil {
+			fmt.Println("      >>>>     unicastMsgHandler: received ping!")
+			ProcessPing(NewPingInfo.Ping, src.IP.String())
+			success = true
+		}
 	}
 
 	if success == false {
@@ -626,10 +635,109 @@ func initializeRandom() {
 //    Audio                                        //
 /////////////////////////////////////////////////////
 
+var npackets int = 0
+var readBank = 0
+var writeBank = 0
+const nBanks = 2048
+const bufferSize = 16
+const sampleRate = 44100
+const bytesPerSample = 2
+const numberOfChannels = 1
+var availableFrames = 0
+var packetsReceived = 0
+var buffer = make([]int16, bufferSize * numberOfChannels * nBanks)
+var min int16 = 32767
+var max int16 = -32768
+var topeBuffer = make([]byte, 80000)
+var receivedBytes = 0
+
 func StartAudio() {
 
+	protocol := "udp"
+	udpAddr, err := net.ResolveUDPAddr(protocol, ":"+ServerAudioPort)
+	if err != nil {
+		fmt.Println("Wrong Address")
+		return
+	}
+
+	fmt.Println("UDP listening for server audio @ " + udpAddr.String())
+
+	udpConn, err := net.ListenUDP(protocol, udpAddr)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	portaudio.Initialize()
+	defer portaudio.Terminate()
+
+	stream, err := portaudio.OpenDefaultStream(0, numberOfChannels, sampleRate, bufferSize,
+     		func(out []int16) {
+			if availableFrames > 0 { //skipFrames {
+				//readBank = (readBank + skipFrames) % nBanks
+				for i:=range out {
+					out[i] = buffer[i+bufferSize*numberOfChannels*(readBank)]
+				}
+				readBank = (readBank + 1) % nBanks
+				availableFrames--
+				//if(skipFrames > 0) {
+				//	skipFrames--
+				//}
+				//fmt.Println("dec availableFrames", availableFrames)
+				return
+			} else {
+				//fmt.Println("Blanking out ", skipFrames)
+				//skipFrames++
+				for i:=range out {
+					out[i] = 0
+				}
+			}
+		})
+	stream.Start()
+	defer stream.Close()
+
+	//Keep calling this function
+	for {
+		addData(udpConn)
+	}
 }
 
+func addData(conn *net.UDPConn) {
+
+	var maxShortVal int16 = 0
+	var buf [2048]byte
+	n, err := conn.Read(buf[0:])
+	fmt.Printf("%d bytes received\n", n)
+	if n != bufferSize * bytesPerSample * numberOfChannels {
+		fmt.Println("Packet dropped, should be length: " + strconv.Itoa(bufferSize * bytesPerSample * numberOfChannels))
+		return
+	}
+	if err != nil {
+		fmt.Println("Error Reading")
+		return
+	} else {
+	
+		if availableFrames < nBanks {
+			for i := 0 ; i < bufferSize * numberOfChannels; i++ {
+				shortval := int16(buf[i*2]) + int16(buf[i*2+1]) << 8
+				if(shortval > maxShortVal) { maxShortVal = shortval }
+				if(shortval > max) { max = shortval }
+				if(shortval < min) { min = shortval }
+				buffer[i+bufferSize*numberOfChannels*(writeBank)] = shortval
+			}
+			availableFrames++
+			writeBank = (writeBank + 1) % nBanks
+		} else {
+			fmt.Println("Warning: buffer full")
+		}
+	}
+	
+	receivedBytes = receivedBytes + n
+	packetsReceived++
+	npackets++
+
+	//fmt.Println("Packets received: ", npackets)
+
+}
 
 
 

@@ -18,6 +18,7 @@ import (
 	"strings"
 	"io/ioutil"
 	"net"
+	//"os"
 	"strconv"
 	"time"
 	"unsafe"
@@ -35,6 +36,21 @@ const RESTPort string = "8000"
 
 // schema for the prototype: simple PSK, better than nothing!
 const SilentEducationPSK = "4baUV/2T=1a4nGrDS43FGnv6100asRNa35+shd/2b42300aNUFHsdn2m3iUJ86B/d2"
+
+// Circular buffer
+type AudioBuffer struct {
+	byteData	[]byte
+	int16Data   []int16
+	frameSize	int
+	bytesPerSample int
+	numberOfFrames int
+	offsetSamples int
+	sampleCapacity int // amount of samples
+	frameCapacity int // amount of frames
+	offsetBytes int
+	startHeadFrames int
+	endHeadFrames   int
+}
 
 type ServerInfo struct {
 	ServerIP	string	`json:"serverip"`
@@ -71,7 +87,21 @@ const (
 
 var serverIPknown bool
 
-
+func MakeAudioBuffer(capacity int, frameSize int, bytesPerSample int) *AudioBuffer {
+	result := new (AudioBuffer)
+	result.sampleCapacity = capacity
+	result.frameSize = frameSize // in samples, typically 16 (32 bytes)
+	result.frameCapacity = capacity/frameSize
+	result.int16Data = make([]int16, capacity)
+	result.byteData = int16SliceAsByteSlice(result.int16Data)
+	result.bytesPerSample = bytesPerSample // typically 2
+	result.numberOfFrames = 0
+	result.offsetSamples = 0
+	result.offsetBytes = 0
+	result.startHeadFrames = 0
+	result.endHeadFrames = 0
+	return result
+}
 
 /////////////////////////////////////////////////////
 //    Commands                                     //
@@ -717,6 +747,8 @@ var max int16 = -32768
 var topeBuffer = make([]byte, 80000)
 var receivedBytes = 0
 
+
+// this one blocks so it's got to be called as goroutine
 func StartAudio() {
 
 	protocol := "udp"
@@ -738,25 +770,39 @@ func StartAudio() {
 
 	stream, err := portaudio.OpenDefaultStream(0, numberOfChannels, sampleRate, bufferSize,
      		func(out []int16) {
-			if availableFrames > 0 { //skipFrames {
-				//readBank = (readBank + skipFrames) % nBanks
+
+     		// AudioFromServer has priority over UDP audio stream
+			if AudioFromServerBuffer.startHeadFrames != AudioFromServerBuffer.endHeadFrames {
 				for i:=range out {
-					out[i] = buffer[i+bufferSize*numberOfChannels*(readBank)]
+					out[i] = AudioFromServerBuffer.int16Data[AudioFromServerBuffer.startHeadFrames*bufferSize + i]
 				}
-				readBank = (readBank + 1) % nBanks
-				availableFrames--
-				//if(skipFrames > 0) {
-				//	skipFrames--
-				//}
-				//fmt.Println("dec availableFrames", availableFrames)
-				return
+				AudioFromServerBuffer.startHeadFrames = (AudioFromServerBuffer.startHeadFrames+1)%AudioFromServerBuffer.frameCapacity
+
 			} else {
-				//fmt.Println("Blanking out ", skipFrames)
-				//skipFrames++
-				for i:=range out {
-					out[i] = 0
+
+				if availableFrames > 0 { //skipFrames {
+				//readBank = (readBank + skipFrames) % nBanks
+					for i:=range out {
+						out[i] = buffer[i+bufferSize*numberOfChannels*(readBank)]
+					}
+					readBank = (readBank + 1) % nBanks
+					availableFrames--
+					//if(skipFrames > 0) {
+					//	skipFrames--
+					//}
+					//fmt.Println("dec availableFrames", availableFrames)
+					return
+				} else {
+					//fmt.Println("Blanking out ", skipFrames)
+					//skipFrames++
+					for i:=range out {
+						out[i] = 0
+					}
 				}
+
 			}
+
+
 		})
 	stream.Start()
 	defer stream.Close()
@@ -876,45 +922,43 @@ func Float32toInt16(inData []float32, outData []int16, length int) {
 	}
 }
 
-var ByteAudioBuffer []byte
-var ByteAudioBufferOffset int
-var SamplesAudioBufferOffset int
+var AudioFromServerBuffer *AudioBuffer
 
-const MaxSamplesInBuffer = 2000000
+const MaxSamplesInBuffer = 16000000 // 1 million frames
 
 func initAudio() {
-	ByteAudioBuffer = make([]byte, MaxSamplesInBuffer*2)
-	ByteAudioBufferOffset = 0
-	SamplesAudioBufferOffset = 0
+	AudioFromServerBuffer = MakeAudioBuffer(MaxSamplesInBuffer, bufferSize, bytesPerSample)
 }
 
 func audioStartRecording() {
-	ByteAudioBufferOffset = 0
-	SamplesAudioBufferOffset = 0
+	// Nothing here
 }
 
+/* We'll leave here for further testing purposes
 func DumpAudioToAudioBuffer(data []byte) {
-	numberOfFrames := (len(data)/2)/bufferSize
-	bufSizeFloat32 := float32(bufferSize)
-	sampleRateFloat32 := float32(44100.0)
-	fractionOfSecond := bufSizeFloat32/sampleRateFloat32
-	mus := fractionOfSecond*float32(499900.0)
-	musToWait := time.Duration(mus) //time.Duration(((float32(bufferSize))/(float32(44100.0)))*float32(990.0))
-	for i:=0 ; i<numberOfFrames ; i++ {
-		AppendFrameToSoundBuffer(data[i*2*bufferSize:(i+1)*2*bufferSize])
-		time.Sleep (musToWait * time.Microsecond)
-	}
+	
+	// write bytes to file!!
+	
+	file, err := os.Create("audio.raw")
+    if err != nil {
+        log.Fatal(err)
+    }
+    file.Write(data)
+    file.Close()
+    fmt.Println("    >> audio.raw written (in theory)")
+    
 }
+*/
 
 func audioEndRecording() {
-	bytes := ByteAudioBuffer[:ByteAudioBufferOffset]
-	go DumpAudioToAudioBuffer(bytes)
+	AudioFromServerBuffer.endHeadFrames = AudioFromServerBuffer.numberOfFrames
 }
 
 func audioStreamData(frame []byte) {
-	_ = copy(ByteAudioBuffer[ByteAudioBufferOffset:], frame)
-	ByteAudioBufferOffset = ByteAudioBufferOffset + len(frame)
-	SamplesAudioBufferOffset = SamplesAudioBufferOffset + len(frame)/2
+	_ = copy(AudioFromServerBuffer.byteData[AudioFromServerBuffer.offsetBytes:], frame)
+	AudioFromServerBuffer.offsetBytes = (AudioFromServerBuffer.offsetBytes + len(frame)) % (AudioFromServerBuffer.sampleCapacity * AudioFromServerBuffer.bytesPerSample)
+	AudioFromServerBuffer.offsetSamples = (AudioFromServerBuffer.offsetSamples + len(frame)/bytesPerSample) % AudioFromServerBuffer.sampleCapacity
+	AudioFromServerBuffer.numberOfFrames = (AudioFromServerBuffer.numberOfFrames + (len(frame)/bytesPerSample)/bufferSize) % AudioFromServerBuffer.frameCapacity
 }
 
 

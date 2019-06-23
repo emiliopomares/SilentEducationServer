@@ -245,7 +245,29 @@ function sendMessageTo(index) {
 }
 
 function startAudioBroadcast() {
-	audioSocket.send("start");
+	var ids = ""
+	var targets = 0
+	for(var i = 0; i < devices.length; ++i) {
+		if (document.getElementById("checkbox"+i).checked == true) {
+			ids += (":" + i)
+			++targets
+		}
+	}
+	if(targets == 0) {
+		alert("Advertencia: ningún dispositivo seleccionado")
+	}
+	else {
+		startAudioUnicast(ids)
+	}
+}
+
+function stopAudioBroadcast() {
+	audioBroadcastState.state = 'stopped'
+	audioSocket.send("end");
+}
+
+function startAudioUnicast(device) {
+	audioSocket.send("start:"+device);
 	audioBroadcastState.state = 'playing'
 	if(audioBroadcastState.initialized == false) {
 		navigator.mediaDevices.getUserMedia({audio:true, video:false}).then( (stream) => {
@@ -270,20 +292,11 @@ function startAudioBroadcast() {
 		})
 	}
 	audioBroadcastState.initialized = true
-
-}
-
-function stopAudioBroadcast() {
-	audioBroadcastState.state = 'stopped'
-	audioSocket.send("end");
-}
-
-function startAudioUnicast(device) {
-	//alert("Start audio unicast to device " + device)
 }
 
 function stopAudioUnicast(device) {
-	alert("Stop audio unicast to device " + device)
+	//alert("Stop audio unicast to device " + device)
+	stopAudioBroadcast()
 }
 //document.getElementById("nameofdevice0").addEventListener("input", function() {
 //    alert("name changed to: " + document.getElementById("nameofdevice0").innerHTML)

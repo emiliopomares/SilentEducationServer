@@ -33,8 +33,8 @@ type DeviceInfo struct {
         Volume          int     `json:"volume"`
         Threshold       int     `json:"threshold"`
         Duration        int     `json:"duration"`
-	Id		string	`json:"id"`
-	Name            string  `json:"name"`
+		Id				string	`json:"id"`
+		Name            string  `json:"name"`
         Activation      string  `json:"activation"`
 }
 
@@ -392,6 +392,8 @@ func wsAudioToDevice(w http.ResponseWriter, r *http.Request) {
     
 }
 
+var DevicesToSendAudioTo  []int
+
 // this handler takes audio coming from the web interface
 func wsAudioFromWeb(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("  >> wsAudioFromWeb called")
@@ -410,8 +412,20 @@ func wsAudioFromWeb(w http.ResponseWriter, r *http.Request) {
 		// check if it is a command
 		if(len(handshakemsg) < 128) {
 			msg := string(handshakemsg)
-			if(msg == "start") {
+			if(strings.HasPrefix(msg, "start")) {
 				fmt.Println("   >> audio recording start")
+				idStrs := strings.Split(msg[6:],":")
+				DevicesToSendAudioTo = []int{}
+				Devices := 0
+				for i:=0 ; i<len(idStrs) ; i++ {
+					fmt.Println("    ### trying to parse " + idStrs[i])
+					val, err := strconv.Atoi(idStrs[i])
+					if err == nil {
+						DevicesToSendAudioTo = append(DevicesToSendAudioTo, val)
+						Devices++
+					}
+				}
+				fmt.Println("    >>>>> sending audio to " + strconv.Itoa(Devices) + " devices")
 				audioStartRecording()
 			} else if (msg == "end") {
 				fmt.Println("   >> audio recording end")
@@ -570,20 +584,27 @@ func audioEndRecording() {
 	bytes := int16SliceAsByteSlice(Int16AudioBuffer[:Float32AudioBufferOffset])
 	//bytes := float32SliceAsByteSlice(Float32AudioBuffer[:Float32AudioBufferOffset])
 
-	//// write bytes to file!!
-	//file, err := os.Create("audio.raw")
-    //if err != nil {
-    //    log.Fatal(err)
-   // }
-    //file.Write(bytes)
-    //file.Close()
-    //fmt.Println("    >> audio.raw written (in theory)")
 
-	// send to all
+/*
+	// write bytes to file!!
+	file, err := os.Create("audio.raw")
+    if err != nil {
+        log.Fatal(err)
+    }
+    file.Write(bytes)
+    file.Close()
+    fmt.Println("    >> audio.raw written (in theory)")
+
+*/
+
+
+
+	// send to recipients
 	
-    for i := 0 ; i < len(deviceAudioConnections) ; i++ {
+   // for i := 0 ; i < len(deviceAudioConnections) ; i++ {
+   	for i := 0 ; i < len(DevicesToSendAudioTo) ; i++ {
     	blockSize := 1024 // @TODO must make sure to add padding if needed
-    	_ = deviceAudioConnections[i].WriteMessage(1, []byte("start"))
+    	_ = deviceAudioConnections[DevicesToSendAudioTo[i]].WriteMessage(1, []byte("start"))
     	for j := 0 ; j < Float32AudioBufferOffset/blockSize; j++ {
     		_ = deviceAudioConnections[i].WriteMessage(1, bytes[j*2*blockSize:(j+1)*2*blockSize])
     	}

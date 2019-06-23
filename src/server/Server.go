@@ -422,6 +422,7 @@ func wsAudioFromWeb(w http.ResponseWriter, r *http.Request) {
 					val, err := strconv.Atoi(idStrs[i])
 					if err == nil {
 						DevicesToSendAudioTo = append(DevicesToSendAudioTo, val)
+						fmt.Println("    >>>>> sending audio to device id: ", val)
 						Devices++
 					}
 				}
@@ -604,11 +605,12 @@ func audioEndRecording() {
    // for i := 0 ; i < len(deviceAudioConnections) ; i++ {
    	for i := 0 ; i < len(DevicesToSendAudioTo) ; i++ {
     	blockSize := 1024 // @TODO must make sure to add padding if needed
-    	_ = deviceAudioConnections[DevicesToSendAudioTo[i]].WriteMessage(1, []byte("start"))
+    	sendDeviceId := DevicesToSendAudioTo[i]
+    	_ = deviceAudioConnections[sendDeviceId].WriteMessage(1, []byte("start"))
     	for j := 0 ; j < Float32AudioBufferOffset/blockSize; j++ {
-    		_ = deviceAudioConnections[i].WriteMessage(1, bytes[j*2*blockSize:(j+1)*2*blockSize])
+    		_ = deviceAudioConnections[sendDeviceId].WriteMessage(1, bytes[j*2*blockSize:(j+1)*2*blockSize])
     	}
-    	_ = deviceAudioConnections[i].WriteMessage(1, []byte("end"))
+    	_ = deviceAudioConnections[sendDeviceId].WriteMessage(1, []byte("end"))
 	}	
 
 }

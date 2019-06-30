@@ -52,6 +52,10 @@ type AudioBuffer struct {
 	endHeadFrames   int
 }
 
+type ValueInfo struct {
+	Value		int	`json:"value"`
+}
+
 type ServerInfo struct {
 	ServerIP	string	`json:"serverip"`
 }
@@ -63,6 +67,7 @@ type PingInfo struct {
 type DeviceInfo struct {
 	Volume		int	`json:"volume"`
 	Threshold	int	`json:"threshold"`
+	Frequency	int	`json:"frequency"`
 	Duration	int	`json:"duration"`
 	Id		string  `json:"id"`
 	Name		string  `json:"name"`
@@ -253,6 +258,11 @@ func setupRESTAPI() {
 	r.HandleFunc("/pairing", CheckPairing).Methods("GET")
 	r.HandleFunc("/healthcheck", Healthcheck).Methods("GET")
 	r.HandleFunc("/ping/{ip}", WithPSKCheck(HandlePing)).Methods("GET")
+        r.HandleFunc("/volume", WithPSKCheck(GetVolume)).Methods("GET")
+	r.HandleFunc("/volume", WithPSKCheck(SetVolume)).Methods("PUT")
+        r.HandleFunc("/frequency", WithPSKCheck(GetFrequency)).Methods("GET")
+        r.HandleFunc("/frequency", WithPSKCheck(SetFrequency)).Methods("PUT")
+	r.HandleFunc("/message", WithPSKCheck(PrintMessage)).Methods("PUT")
 	http.ListenAndServe(":"+RESTPort, r)
 }
 
@@ -287,6 +297,52 @@ func CheckPairing(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func SetVolume(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("   &&&&&&&&&&&&&&&&&&& set volume called &&&&&&&&&&&&&&&&& ")
+	var valueInfo ValueInfo
+	err := json.NewDecoder(r.Body).Decode(&valueInfo)
+	if err != nil {
+		JSONResponseFromStringAndCode(w, "{\"error\":\""+err.Error()+"\"}", 400)
+	} else {
+		deviceInfo.Volume = valueInfo.Value
+		SaveDeviceConfigToFile()
+		JSONResponseFromString(w, "{\"result\":\"success\"}")
+	}
+}
+
+func GetVolume(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("   &&&&&&&&&&&&&&&&&&& get volume called &&&&&&&&&&&&&&&&& ")
+	JSONResponseFromString(w, "{\"result\":"+strconv.Itoa(deviceInfo.Volume)+"}")
+}
+
+func SetFrequency(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("   &&&&&&&&&&&&&&&&&&& set frequency called &&&&&&&&&&&&&&&&& ")
+ 	var valueInfo ValueInfo
+        err := json.NewDecoder(r.Body).Decode(&valueInfo)
+        if err != nil {
+                JSONResponseFromStringAndCode(w, "{\"error\":\""+err.Error()+"\"}", 400)
+        } else {
+                deviceInfo.Frequency = valueInfo.Value
+                SaveDeviceConfigToFile()
+                JSONResponseFromString(w, "{\"result\":\"success\"}")
+        }
+}
+
+func GetFrequency(w http.ResponseWriter, r *http.Request) {
+        JSONResponseFromString(w, "{\"result\":"+strconv.Itoa(deviceInfo.Frequency)+"}")
+}
+
+func PrintMessage(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("   &&&&&&&&&&&&&&&&&&& print message called &&&&&&&&&&&&&&&&& ")
+	var messageInfo MessageInfo
+	err := json.NewDecoder(r.Body).Decode(&messageInfo)
+	if err != nil {
+		JSONResponseFromStringAndCode(w, "{\"error\":\""+err.Error()+"\"}", 400)
+	} else {	
+		fmt.Println("   ########################## MESSAGE: " + messageInfo.Msg + " in " + messageInfo.Color + " ############################")
+		JSONResponseFromString(w, "{\"result\":\"success\"}")
+	}
+}
 
 /////////////////////////////////////////////////////
 //    Websockets                                   //

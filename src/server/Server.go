@@ -361,7 +361,10 @@ func wsProcessBrowserCommand(socket *websocket.Conn, cmd string) {
 		fmt.Println("         >> rename command")
 		index, exists := findInDeviceArray(command.Rename.Id)
 		if exists {
+			fmt.Println("    >> sending command " + cmd + " to device ", index)
 			deviceConnections[index].WriteMessage(1, []byte(cmd))			
+		} else {
+			fmt.Println("    >> there was an error sending to device ", index)
 		}
 	} 
 

@@ -1,0 +1,116 @@
+{
+ "ledgers": [
+  {
+   "deviceid": "AAAA",
+   "months": [
+    {
+     "year": 2019,
+     "number": 7,
+     "days": [
+      {
+       "number": 19,
+       "weekday": 5,
+       "hours": [
+        {
+         "number": 0,
+         "activations": 1,
+         "warnings": 2,
+         "activationminutes": 2,
+         "ActivationFlag": false,
+         "HourOfLastActivation": 20,
+         "MinuteOfLastActivation": 17
+        }
+       ]
+      },
+      {
+       "number": 21,
+       "weekday": 0,
+       "hours": [
+        {
+         "number": 2,
+         "activations": 1,
+         "warnings": 1,
+         "activationminutes": 1,
+         "ActivationFlag": false,
+         "HourOfLastActivation": 9,
+         "MinuteOfLastActivation": 50
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "deviceid": "BBBB",
+   "months": [
+    {
+     "year": 2019,
+     "number": 7,
+     "days": [
+      {
+       "number": 22,
+       "weekday": 1,
+       "hours": [
+        {
+         "number": 1,
+         "activations": 1,
+         "warnings": 0,
+         "activationminutes": 1,
+         "ActivationFlag": false,
+         "HourOfLastActivation": 8,
+         "MinuteOfLastActivation": 45
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "year": 2019,
+     "number": 8,
+     "days": [
+      {
+       "number": 13,
+       "weekday": 2,
+       "hours": [
+        {
+         "number": 5,
+         "activations": 0,
+         "warnings": 1,
+         "activationminutes": 0,
+         "ActivationFlag": false,
+         "HourOfLastActivation": 0,
+         "MinuteOfLastActivation": 0
+        }
+       ]
+      },
+      {
+       "number": 14,
+       "weekday": 3,
+       "hours": [
+        {
+         "number": 0,
+         "activations": 1,
+         "warnings": 0,
+         "activationminutes": 4,
+         "ActivationFlag": false,
+         "HourOfLastActivation": 11,
+         "MinuteOfLastActivation": 21
+        },
+        {
+         "number": 3,
+         "activations": 1,
+         "warnings": 0,
+         "activationminutes": 10,
+         "ActivationFlag": false,
+         "HourOfLastActivation": 10,
+         "MinuteOfLastActivation": 51
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

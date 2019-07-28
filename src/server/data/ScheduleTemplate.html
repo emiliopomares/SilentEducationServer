@@ -1,0 +1,99 @@
+<title>Silent Education Control Panel</title>
+
+<style>
+body {
+  font-family: Arial;
+}
+</style>
+
+<html>
+<body>
+
+<div id="Schedule"></div>
+<button style="align-self: right" onclick="addRow()">+</button>
+
+<br><br>
+<center>
+<button style="align-self: right" onclick="closeWindow()">Cerrar</button>
+</center>
+
+</body>
+</html>
+
+<script>
+
+nRows = 0
+redrawRows()
+schedule = {}
+
+function closeWindow() {
+	window.close()
+}
+
+function addRow() {
+
+	nRows++
+
+	redrawRows()
+
+}
+
+function removeRow() {
+
+	nRows--
+	delete schedule["starttime"+nRows]
+	delete schedule["endtime"+nRows]
+
+	redrawRows()
+
+}
+
+function redrawRows() {
+
+	newHTML = "<table><tr><td>Hora</td><td>Comienzo</td><td>Fin</td><td> </td></tr>"
+
+	var starttimevalue = ""
+
+	var endtimevalue = ""
+
+	for (var i = 0; i < nRows; ++i) {
+		if(schedule["starttime"+i] !== undefined) {
+			starttimevalue = schedule["starttime"+i]
+		}
+		else {
+			starttimevalue = ""
+		}
+		if(schedule["endtime"+i] !== undefined) {
+			endtimevalue = schedule["endtime"+i]
+		}
+		else {
+			endtimevalue = ""
+		}
+		newHTML += "<tr><td>"+(i+1)+"</td><td><input type=\"time\" id=\"beginTime"+i+"\" value=\""+starttimevalue+"\" onchange=\"changeBeginTime("+i+");\"></td><td><input type=\"time\" id=\"endTime"+i+"\" value=\""+endtimevalue+"\" onchange=\"changeEndTime("+i+");\"></td>"
+		if(i == nRows - 1) {
+			newHTML +="<td><button style=\"align-self: right\" onclick=\"removeRow("+i+")\">-</button></td>"
+		}
+		newHTML += "</tr>"
+	}
+	newHTML += "</table>"
+	document.getElementById("Schedule").innerHTML = newHTML
+
+}
+
+function changeBeginTime(row) {
+	time = document.getElementById("beginTime"+row).value
+	comps = time.split(":")
+	schedule["starthour"+row] = comps[0]
+	schedule["startmin"+row] = comps[1]
+	schedule["starttime"+row] = time
+}
+
+function changeEndTime(row) {
+	time = document.getElementById("endTime"+row).value
+	comps = time.split(":")
+	schedule["endhour"+row] = comps[0]
+	schedule["endmin"+row] = comps[1]
+	schedule["endtime"+row] = time
+}
+
+</script>

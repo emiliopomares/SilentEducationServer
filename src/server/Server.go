@@ -3,6 +3,7 @@ package main
 import (
 	//"encoding/hex"
 	"log"
+	//"time"
 	//"net/http"
 	"encoding/json"
 	"io/ioutil"
@@ -36,6 +37,7 @@ type DeviceInfo struct {
 		Id				string	`json:"id"`
 		Name            string  `json:"name"`
         Activation      string  `json:"activation"`
+        Socket 			*websocket.Conn
 }
 
 /////////////////////////////////////////////////////
@@ -85,6 +87,7 @@ const (
         MulticastAddr   = "224.0.0.1"
         maxDatagramSize = 8192
 	LoginAccessFile	= "./data/LoginAccessTemplate.html"
+	ScheduleFile = "./data/ScheduleTemplate.html"
 	ControlPanelFile = "./data/ControlPanelTemplate.html"
 )
 
@@ -272,6 +275,10 @@ func AttemptLogin(w http.ResponseWriter, r *http.Request) {
 func LoginScreen(w http.ResponseWriter, r *http.Request) {
 	ReplyWithInstancedFileTemplate(w, LoginAccessFile, []string{"<message>", "<serverip>", "<port>"}, []string{"", "localhost", RESTPort})
 }
+
+func ScheduleScreen(w http.ResponseWriter, r *http.Request) {
+	ReplyWithInstancedFileTemplate(w, ScheduleFile, []string{"<message>", "<serverip>", "<port>"}, []string{"", "localhost", RESTPort})
+}
 //ReplyWithInstancedFileTemplate(w, LoginAccessFile, []string{"<message>", "<serverip>", "<port>"}, []string{"Datos de acceso incorrectos", LocalIP, RESTPort})
 
 func Healthcheck(w http.ResponseWriter, r *http.Request) {
@@ -282,8 +289,9 @@ func setupWebServer() {
 	fmt.Println("  >> web server setup")
         r := mux.NewRouter()
         r.HandleFunc("/", LoginScreen).Methods("GET")
+        r.HandleFunc("/Schedule", ScheduleScreen).Methods("GET")
         r.HandleFunc("/login", AttemptLogin).Methods("POST")
-	r.HandleFunc("/healthcheck", Healthcheck).Methods("GET")
+		r.HandleFunc("/healthcheck", Healthcheck).Methods("GET")
 //        r.HandleFunc("/panel", GetPanel).Methods("PUT")
         http.ListenAndServe(":"+RESTPort, r)
 }
@@ -339,13 +347,62 @@ func addToDevicesIfNew(info *DeviceInfo) {
 	}
 }
 
+func findInDeviceArrayBySocket(socket *websocket.Conn) (*DeviceInfo, bool) {
+	for i:=0; i < len(devices); i++ {
+		if(devices[i].Socket == socket) {
+			return devices[i],true
+		}
+	}
+	return nil,false
+}
+
 func wsProcessDeviceCommand(socket *websocket.Conn, cmd string) {
 	fmt.Println("  >> wsProcessDeviceCommand called " + cmd)
+	if cmd == "Acknowledged" {
+		return
+	}
+	if cmd == "Warning" {
+		fmt.Println("     >>>>>>>>>> STATE CHANGED TO WARNING  <<<<<<<< ")
+		devInfo, success := findInDeviceArrayBySocket(socket)
+		if success {
+			devInfo.Activation = "Yellow"
+		}
+		wsBroadcastDeviceInfoToBrowsers(devInfo)
+		return
+	}
+	if cmd == "Activated" {
+		fmt.Println("     >>>>>>>>>> STATE CHANGED TO ACTIVATION  <<<<<<<< ")
+		devInfo, success := findInDeviceArrayBySocket(socket)
+		if success {
+			devInfo.Activation = "Red"
+		}
+		wsBroadcastDeviceInfoToBrowsers(devInfo)
+		return
+	}
+	if cmd == "Deactivated" {
+		fmt.Println("     >>>>>>>>>> STATE CHANGED TO DEACTIVATION  <<<<<<<< ")
+		devInfo, success := findInDeviceArrayBySocket(socket)
+		if success {
+			devInfo.Activation = "Yellow"
+		}
+		wsBroadcastDeviceInfoToBrowsers(devInfo)
+		return
+	}
+	if cmd == "Idle" {
+		fmt.Println("     >>>>>>>>>> STATE CHANGED TO IDLE  <<<<<<<< ")
+		devInfo, success := findInDeviceArrayBySocket(socket)
+		if success {
+			devInfo.Activation = "Green"
+		}
+		wsBroadcastDeviceInfoToBrowsers(devInfo)
+		return
+	}
 	var info DeviceInfo
 	err := json.Unmarshal([]byte(cmd), &info)
 	if err != nil {
 		fmt.Println("Error receiving command from device: " + err.Error())
 	} else {
+		info.Socket = socket
 		fmt.Println(" info unmarshalled as : " , info)
 		addToDevicesIfNew(&info)
 		//wsBroadcastToBrowsers(cmd)
@@ -370,9 +427,10 @@ func wsProcessBrowserCommand(socket *websocket.Conn, cmd string) {
 
 	err = json.Unmarshal([]byte(cmd), &message)
 	if (err == nil) && (message.Message.Msg != "") {
-		fmt.Println("          >> Message command")
+		fmt.Println("          >> Message " + cmd + " to device ", message.Message.To)
 		deviceConnections[message.Message.To].WriteMessage(1, []byte(cmd))
-	}
+		}
+	fmt.Println("  end wsProcessBrowserCommand ")
 }
 
 // this handler sends audio to the device websocket
@@ -427,6 +485,8 @@ func wsAudioFromWeb(w http.ResponseWriter, r *http.Request) {
 						DevicesToSendAudioTo = append(DevicesToSendAudioTo, val)
 						fmt.Println("    >>>>> sending audio to device id: ", val)
 						Devices++
+					} else {
+						fmt.Println("   >>> there was error sending audio: " + err.Error())
 					}
 				}
 				fmt.Println("    >>>>> sending audio to " + strconv.Itoa(Devices) + " devices")

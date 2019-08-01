@@ -3,13 +3,56 @@
 <style>
 body {
   font-family: Arial;
+  margin:0px;
 }
+
+.rcornersGreen {
+  border-radius: 25px;
+  border: 2px solid #73AD21;
+  padding: 20px; 
+  width: 80%;
+}
+
+.rcornersOrange {
+  border-radius: 25px;
+  border: 2px solid #DD5521;
+  padding: 20px; 
+  width: 80%;
+}
+
+.rcornersBlue {
+  border-radius: 25px;
+  border: 2px solid #3399EE;
+  padding: 20px; 
+  width: 80%;
+}
+
+.rcornersBlueFill {
+  border-radius: 25px;
+  border: 2px solid #3399EE;
+  background: #3399EE;
+  padding: 20px; 
+  width: 35%;
+}
+
 </style>
 
 <html>
 <body>
 
-<div style="width:100%;height:45px;background:#888888;vertical-align: middle"><div id="AccountType" style="vertical-align: middle;"><usertype></div><button style="align-self: right" onclick="logout()">Cerrar sesión</button></div>
+<div style="width:100%;height:45px;background:#888888;vertical-align: middle">
+	<div id="AccountType" style="vertical-align: middle;"><usertype></div>
+		<table>
+			<tr>
+				<td>
+				<button style="align-self: right" onclick="logout()">Cerrar sesión</button>
+				</td>
+				<td>
+				<button style="align-self: right" onclick="logout()">Cambiar contraseña</button>
+				</td>
+			</tr>
+		</table>
+</div>
 
 <br>
 <center>
@@ -20,31 +63,44 @@ body {
 
 <br><br><br>
 
-Mensajes automáticos: <br><br>
+<div class="rcornersOrange">
+<h2>Mensajes automáticos:</h2><br>
 <table>
 	<tr>
-		<td>Sin advertencias ni activaciones: </td><td><input type="textfield" value="¡Lo habéis hecho muy bien!, seguid así" size="80"></td>
+		<td align="right">Sin advertencias ni activaciones: </td><td><input type="textfield" id="ZeroWarnings" value="" onChange="updatePresets();" size="80"></td>
 	</tr>
 	<tr>
-		<td>Hasta <input type="textfield" value="3" size="2"> advertencias o <input type="textfield" value="1" size="2">activaciones:</td><td> <input type="textfield" value="No está mal, pero hay que seguir mejorando" size="80"></td>
+		<td align="right">Hasta <input type="textfield" id="MaxWarnings" onChange="updatePresets();" value="" size="2"> advertencias o <input type="textfield" id="MaxActivations" onChange="updatePresets();" value="" size="2">activaciones:</td><td> <input type="textfield" id="SomeWarnings" value="" onChange="updatePresets();" size="80"></td>
 	</tr>
 	<tr>
-		<td>Más advertencias o activaciones: </td><td><input type="textfield" value="Muy mal, lo volveremos a intentar mañana..." size="80"></td>
+		<td align="right">Más advertencias o activaciones: </td><td><input type="textfield" id="ManyWarnings" value="" onChange="updatePresets();" size="80"></td>
 	</tr>
 </table>
-<br><br>
+<br>
+</div>
 
-<button style="align-self: right" onclick="window.open('./Schedule', 'Horarios', 'width=200,height=250');">Configurar horarios</button>
 <br><br><br>
 
-
-<button style="align-self: right" onclick="selectAllDevices()">Todos</button> <button style="align-self: right" onclick="selectNoDevices()">Ninguno</button>
+<div class="rcornersGreen">
+<h2>Horario:</h2><br>
+<div id="Schedule"></div>
+<button style="align-self: right;position: relative;left:-95px;" onclick="addRow()">+</button>
 <br><br>
-Mensaje: <input type=\"textfield\" id="message"><br>
-<input type="radio" name="color" value="red" checked><font size=2 color='red'>Rojo</font>
-<input type="radio" name="color" value="orange"><font size=2 color='orange'>Naranja</font>
-<input type="radio" name="color" value="green"><font size=2 color='green'>Verde</font><br><div><button style="height:30px" onClick="broadcastMessage()">Enviar</button>
-	<button style="height:30px;position:relative;top:3px" onmousedown="startAudioBroadcast()" onmouseup="stopAudioBroadcast()"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAPCAMAAADarb8dAAAAdVBMVEUAAADsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgCMHCccAAAAJnRSTlMAo0764M3BupFxYEQcBNmyraidjn1ta2c4MyPv7cWEdmNcUUc/Fhnu3e0AAAB9SURBVAjXdc5HDsMwDATAtdWbe09v/P8TY+lgQEAyAA+75IH4z5uQ5ZLxLDcXJoFpjqtxnGZxNdSiPr8AVNYa0oGo0AWibh8SJyJZ+mUD0AIfiopHrSyAeJcK+UYihqFPRddzH4vNObfqvWhwY/fjj4WTAtYSOKgKufDET18IZwhZzMvL4wAAAABJRU5ErkJggg=="></button></div>
+</div>
+
+<br><br><br>
+
+<div class="rcornersBlue">
+	<div class="rcornersBlueFill">
+		<h2>Envío múltiple:</h2>
+		<button style="align-self: right" onclick="selectAllDevices()">Todos</button> <button style="align-self: right" onclick="selectNoDevices()">Ninguno</button>
+		<br><br>
+		Mensaje: <input type=\"textfield\" id="message"><br>
+		<input type="radio" name="color" value="red" checked><font size=2 color='red'>Rojo</font>
+		<input type="radio" name="color" value="orange"><font size=2 color='orange'>Naranja</font>
+		<input type="radio" name="color" value="green"><font size=2 color='green'>Verde</font><br><div><button style="height:30px" onClick="broadcastMessage()">Enviar</button>
+		<button style="height:30px;position:relative;top:3px" onmousedown="startAudioBroadcast()" onmouseup="stopAudioBroadcast()"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAPCAMAAADarb8dAAAAdVBMVEUAAADsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgDsHgCMHCccAAAAJnRSTlMAo0764M3BupFxYEQcBNmyraidjn1ta2c4MyPv7cWEdmNcUUc/Fhnu3e0AAAB9SURBVAjXdc5HDsMwDATAtdWbe09v/P8TY+lgQEAyAA+75IH4z5uQ5ZLxLDcXJoFpjqtxnGZxNdSiPr8AVNYa0oGo0AWibh8SJyJZ+mUD0AIfiopHrSyAeJcK+UYihqFPRddzH4vNObfqvWhwY/fjj4WTAtYSOKgKufDET18IZwhZzMvL4wAAAABJRU5ErkJggg=="></button></div>
+	</div>
 
 <div id="DeviceArray">
 <table>
@@ -63,8 +119,7 @@ Mensaje: <input type=\"textfield\" id="message"><br>
 		</td>
 	</tr>
 </table>
-
-
+</div>
 
 </div>
 
@@ -81,8 +136,22 @@ socket.onopen = function(e) {
 };
 
 socket.onmessage = function(event) {
+	//@TODO find a more robust message sorting system
   info = JSON.parse(event.data)
-  addDeviceToListOrUpdate(info)
+  
+  if(event.data.startsWith("{\"numhours")) {
+	  if(info.slots == null) {
+		  info.slots = []
+	  }
+	  schedule = info
+	  redrawRows();
+  }
+  else if (event.data.startsWith("{\"nowarnings")) {
+	redrawPresets(info)
+  }
+  else {
+  	addDeviceToListOrUpdate(info)
+  }
 };
 
 socket.onclose = function(event) {
@@ -117,7 +186,7 @@ audioSocket.onerror = function(error) {
 
 </script>
 
-
+<br><br><br>
 
 </body>
 </html>
@@ -179,7 +248,7 @@ function AppendOnChangeListeners(deviceList) {
 
 function RenameDevice(id, newname) {
 	//alert("trying to rename " + id + " to " + newname)
-	socket.send(JSON.stringify({rename:{id:id,to:newname}}))
+	socket.send(JSON.stringify({command:'rename', rename:{id:id,to:newname}}))
 }
 
 function selectAllDevices() {
@@ -236,7 +305,7 @@ function broadcastMessage() {
 			if(radios[2].checked) {
 				color='green'
 			}
-			command = JSON.stringify({message:{to:i,msg:msg,color:color}})
+			command = JSON.stringify({command:'message', message:{to:i,msg:msg,color:color}})
 			socket.send(command)
 		}
 	}
@@ -258,7 +327,7 @@ function sendMessageTo(index) {
 	if(radios[2].checked) {
 		color='green'
 	}
-	command = JSON.stringify({message:{to:index,msg:msg,color:color}})
+	command = JSON.stringify({command:'message', message:{to:index,msg:msg,color:color}})
 	socket.send(command)
 	document.getElementById("message"+index).value = ""
 }
@@ -320,5 +389,147 @@ function stopAudioUnicast(device) {
 //document.getElementById("nameofdevice0").addEventListener("input", function() {
 //    alert("name changed to: " + document.getElementById("nameofdevice0").innerHTML)
 //}, false);
+
+nRows = 0
+
+schedule = {}
+schedule.numhours = 0
+schedule.slots = []
+
+setTimeout(() => {askServerForSchedule()}, 100)
+setTimeout(() => {askServerForPresets()}, 100)
+
+redrawRows()
+
+function closeWindow() {
+	window.close()
+}
+
+function addRow() {
+
+	schedule.numhours++
+	schedule.slots.push({start:{hour:0,minute:0,time:''}, end:{hour:0,minute:0,time:''}})
+	redrawRows()
+
+}
+
+function removeRow() {
+
+	schedule.numhours--
+	schedule.slots.splice(schedule.numhours, 1)
+	redrawRows()
+
+}
+
+function redrawRows() {
+
+	newHTML = "<table><tr><td>Hora</td><td>Comienzo</td><td>Fin</td><td> </td></tr>"
+
+	var starttimevalue = ""
+
+	var endtimevalue = ""
+	
+	for (var i = 0; i < schedule.numhours; ++i) {
+		if(schedule.slots[i].start.time !== '') {
+			starttimevalue = schedule.slots[i].start.time
+		}
+		else {
+			starttimevalue = ""
+		}
+		if(schedule.slots[i].end.time !== '') {
+			endtimevalue = schedule.slots[i].end.time
+		}
+		else {
+			endtimevalue = ""
+		}
+		newHTML += "<tr><td>"+(i+1)+"</td><td><input type=\"time\" id=\"beginTime"+i+"\" value=\""+starttimevalue+"\" onchange=\"changeBeginTime("+i+");\"></td><td><input type=\"time\" id=\"endTime"+i+"\" value=\""+endtimevalue+"\" onchange=\"changeEndTime("+i+");\"></td>"
+		if(i == schedule.numhours - 1) {
+			newHTML +="<td><button style=\"align-self: right\" onclick=\"removeRow("+i+")\">-</button></td>"
+		}
+		newHTML += "</tr>"
+	}
+	newHTML += "</table>"
+	document.getElementById("Schedule").innerHTML = newHTML
+}
+
+function changeBeginTime(row) {
+	time = document.getElementById("beginTime"+row).value
+	comps = time.split(":")
+	if(schedule.numhours < row) {
+		do {
+			schedule.slots.push({start:{hour:'0',minute:'0',time:''}, end:{hour:'0',minute:'0',time:''}})
+		} while(schedule.numhours <= row)
+	}
+	schedule.slots[row].start.hour = parseInt(comps[0])
+	schedule.slots[row].start.minute = parseInt(comps[1])
+	schedule.slots[row].start.time = time
+	sendScheduleToServer()
+}
+
+function changeEndTime(row) {
+	time = document.getElementById("endTime"+row).value
+	comps = time.split(":")
+	if(schedule.numhours < row) {
+		do {
+			schedule.Slots.push({start:{hour:'0',minute:'0',time:''}, end:{hour:'0',minute:'0',time:''}})
+		} while(schedule.numhours <= row)
+	}
+	schedule.slots[row].end.hour = parseInt(comps[0])
+	schedule.slots[row].end.minute = parseInt(comps[1])
+	schedule.slots[row].end.time = time
+	sendScheduleToServer()
+}
+
+function sendScheduleToServer() {
+	socket.send(JSON.stringify({command:'schedule', info:schedule}))
+}
+
+function askServerForSchedule() {
+	socket.send(JSON.stringify({command:'requestschedule'}))
+}
+
+function askServerForPresets() {
+	socket.send(JSON.stringify({command:'requestpresets'}))
+}
+
+function updateMaxWarnings() {
+	var MaxWarnings = document.getElementById("MaxWarnings").value
+}
+
+function updateMaxActivations() {
+	var MaxActivations = document.getElementById("MaxActivations").value
+}
+
+function updatePresets() {
+	presets = {}
+	presets.maxwarnings = parseInt(document.getElementById("MaxWarnings").value)
+	presets.maxactivations = parseInt(document.getElementById("MaxActivations").value)
+	presets.nowarningsmessage = document.getElementById("ZeroWarnings").value
+	presets.midwarningsmessage = document.getElementById("SomeWarnings").value
+	presets.manywarningsmessage = document.getElementById("ManyWarnings").value
+	sendPresetsToServer(presets)
+}
+
+function redrawPresets(presets) {
+	document.getElementById("MaxWarnings").value = '' + presets.maxwarnings
+	document.getElementById("MaxActivations").value = '' + presets.maxactivations
+	document.getElementById("ZeroWarnings").value = presets.nowarningsmessage
+	document.getElementById("SomeWarnings").value = presets.midwarningsmessage
+	document.getElementById("ManyWarnings").value = presets.manywarningsmessage
+}
+
+function sendPresetsToServer(presets) {
+	socket.send(JSON.stringify({command:'presetmessages', info:presets}))
+}
+
+function InitialState(state) {
+	document.getElementById("ZeroWarnings").value = state.ZeroWarnings
+	document.getElementById("SomeWarnings").value = state.SomeWarnings
+	document.getElementById("ManyWarnings").value = state.ManyWarnings
+	document.getElementById("MaxWarnings").value = state.MaxWarnings
+	document.getElementById("MaxActivations").value = state.MaxActivations
+	schedule = state.schedule
+	redrawRows()
+}
 
 </script>

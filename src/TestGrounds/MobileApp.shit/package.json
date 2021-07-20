@@ -12,7 +12,7 @@
     "http": "0.0.0",
     "path": "^0.12.7",
     "react": "16.8.3",
-    "react-native": "0.59.9",
+    "react-native": "0.62.3",
     "react-native-http-bridge": "^0.6.1",
     "react-native-http-server": "^0.1.2",
     "react-native-network-info": "^5.0.1"
